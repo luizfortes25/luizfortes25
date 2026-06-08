@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConstroERP – App de Suprimentos</title>
+  <style>
+    :root {
+      --blue: #0052cc; --blue-dark: #003a99; --blue-light: #e8f0fe;
+      --green: #16a34a; --green-light: #dcfce7;
+      --orange: #ff6b00; --orange-light: #fff3e8;
+      --red: #dc2626; --red-light: #fee2e2;
+      --yellow: #d97706; --yellow-light: #fef3c7;
+      --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb;
+      --gray-400: #9ca3af; --gray-600: #4b5563; --gray-800: #1f2937;
+      --white: #fff; --text: #111827;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.1); --shadow: 0 4px 16px rgba(0,0,0,.1);
+      --radius: 10px; --transition: .2s ease;
+      --sidebar-w: 240px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--gray-50); color: var(--text); }
+    a { text-decoration: none; color: inherit; }
+    button { cursor: pointer; font-family: inherit; }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 200;
+      background: var(--blue-dark); color: #fff;
+      display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 14px; }
+    .topbar-logo { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .topbar-logo span { color: var(--orange); }
+    .topbar-module { background: rgba(255,255,255,.15); border-radius: 6px; padding: 4px 12px; font-size: 12px; font-weight: 600; }
+    .topbar-right { display: flex; align-items: center; gap: 14px; }
+    .notif-btn { position: relative; background: none; border: none; color: rgba(255,255,255,.85); font-size: 18px; padding: 4px; }
+    .notif-badge { position: absolute; top: 0; right: 0; width: 16px; height: 16px; background: var(--orange); border-radius: 50%; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .user-pill { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.12); border-radius: 20px; padding: 5px 12px 5px 6px; font-size: 13px; cursor: pointer; }
+    .user-avatar { width: 28px; height: 28px; background: var(--orange); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; }
+
+    /* ── LAYOUT ── */
+    .layout { display: flex; min-height: 100vh; padding-top: 56px; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w); flex-shrink: 0; position: fixed; top: 56px; bottom: 0; left: 0;
+      background: #fff; border-right: 1px solid var(--gray-200); overflow-y: auto;
+      display: flex; flex-direction: column;
+    }
+    .sidebar-section { padding: 20px 12px 8px; }
+    .sidebar-label { font-size: 10px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: .08em; padding: 0 10px; margin-bottom: 6px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px;
+      font-size: 13px; font-weight: 500; color: var(--gray-600); cursor: pointer;
+      transition: var(--transition); border: none; background: none; width: 100%; text-align: left;
+    }
+    .nav-item:hover { background: var(--gray-100); color: var(--text); }
+    .nav-item.active { background: var(--blue-light); color: var(--blue); font-weight: 600; }
+    .nav-item .icon { width: 18px; text-align: center; font-size: 15px; }
+    .nav-badge { margin-left: auto; background: var(--orange); color: #fff; border-radius: 10px; padding: 1px 7px; font-size: 10px; font-weight: 700; }
+    .nav-badge.blue { background: var(--blue); }
+    .sidebar-footer { margin-top: auto; padding: 16px 12px; border-top: 1px solid var(--gray-200); }
+
+    /* ── MAIN ── */
+    .main { margin-left: var(--sidebar-w); flex: 1; padding: 28px 32px; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── PAGE HEADER ── */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .page-header h1 { font-size: 22px; font-weight: 800; }
+    .page-header p { font-size: 13px; color: var(--gray-600); margin-top: 2px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 7px; font-size: 13px; font-weight: 600; border: 1.5px solid transparent; transition: var(--transition); }
+    .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .btn-primary:hover { background: var(--blue-dark); }
+    .btn-success { background: var(--green); color: #fff; border-color: var(--green); }
+    .btn-success:hover { opacity: .88; }
+    .btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
+    .btn-danger:hover { opacity: .88; }
+    .btn-outline { background: #fff; color: var(--text); border-color: var(--gray-200); }
+    .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* ── STAT CARDS ── */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card { background: #fff; border-radius: var(--radius); padding: 20px; border: 1px solid var(--gray-200); box-shadow: var(--shadow-sm); }
+    .stat-card .label { font-size: 11px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+    .stat-card .value { font-size: 28px; font-weight: 900; color: var(--text); }
+    .stat-card .delta { font-size: 12px; margin-top: 4px; }
+    .stat-card .delta.up { color: var(--green); }
+    .stat-card .delta.warn { color: var(--yellow); }
+    .stat-card .delta.down { color: var(--red); }
+    @media(max-width:900px){ .stats-row{ grid-template-columns: 1fr 1fr; } }
+
+    /* ── TABLE ── */
+    .table-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow-sm); overflow: hidden; }
+    .table-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--gray-200); gap: 12px; flex-wrap: wrap; }
+    .table-toolbar h2 { font-size: 15px; font-weight: 700; }
+    .search-input { border: 1.5px solid var(--gray-200); border-radius: 7px; padding: 8px 12px; font-size: 13px; outline: none; transition: var(--transition); width: 220px; }
+    .search-input:focus { border-color: var(--blue); }
+    .filter-row { display: flex; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--gray-200); flex-wrap: wrap; }
+    .filter-btn { padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1.5px solid var(--gray-200); background: #fff; color: var(--gray-600); cursor: pointer; transition: var(--transition); }
+    .filter-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .filter-btn:hover:not(.active) { border-color: var(--blue); color: var(--blue); }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 11px 16px; font-size: 11px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: .06em; background: var(--gray-50); text-align: left; border-bottom: 1px solid var(--gray-200); }
+    td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid var(--gray-100); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--gray-50); }
+    .tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+    .tag-green { background: var(--green-light); color: var(--green); }
+    .tag-orange { background: var(--orange-light); color: var(--orange); }
+    .tag-blue { background: var(--blue-light); color: var(--blue); }
+    .tag-red { background: var(--red-light); color: var(--red); }
+    .tag-yellow { background: var(--yellow-light); color: var(--yellow); }
+    .tag-gray { background: var(--gray-100); color: var(--gray-600); }
+    .row-actions { display: flex; gap: 6px; }
+
+    /* ── PROGRESS ── */
+    .progress-bar { background: var(--gray-200); border-radius: 4px; height: 6px; }
+    .progress-fill { height: 100%; border-radius: 4px; background: var(--blue); }
+
+    /* ── PANEL (detail/form) ── */
+    .panel-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 300; }
+    .panel-overlay.open { display: flex; justify-content: flex-end; }
+    .panel { width: 520px; max-width: 95vw; height: 100%; background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,.15); display: flex; flex-direction: column; overflow: hidden; }
+    .panel-header { padding: 20px 24px; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: space-between; background: var(--blue-dark); color: #fff; }
+    .panel-header h3 { font-size: 16px; font-weight: 700; }
+    .panel-close { background: none; border: none; color: rgba(255,255,255,.8); font-size: 22px; cursor: pointer; line-height: 1; }
+    .panel-body { flex: 1; overflow-y: auto; padding: 24px; }
+    .panel-footer { padding: 16px 24px; border-top: 1px solid var(--gray-200); display: flex; gap: 10px; justify-content: flex-end; }
+    .detail-section { margin-bottom: 24px; }
+    .detail-section h4 { font-size: 12px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--gray-200); }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .detail-field label { display: block; font-size: 11px; font-weight: 600; color: var(--gray-400); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+    .detail-field span { font-size: 14px; font-weight: 600; color: var(--text); }
+    .detail-items { width: 100%; border-collapse: collapse; }
+    .detail-items th { padding: 8px 10px; font-size: 10px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; background: var(--gray-50); border-bottom: 1px solid var(--gray-200); text-align: left; }
+    .detail-items td { padding: 10px 10px; font-size: 13px; border-bottom: 1px solid var(--gray-100); }
+    .approve-box { background: var(--green-light); border: 1.5px solid #86efac; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .approve-box h4 { color: var(--green); font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .approve-box p { font-size: 12px; color: var(--gray-600); }
+    .warn-box { background: var(--yellow-light); border: 1.5px solid #fde68a; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .warn-box h4 { color: var(--yellow); font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .textarea { width: 100%; border: 1.5px solid var(--gray-200); border-radius: 7px; padding: 10px 12px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 80px; outline: none; transition: var(--transition); }
+    .textarea:focus { border-color: var(--blue); }
+
+    /* ── FORM ── */
+    .form-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); padding: 28px; box-shadow: var(--shadow-sm); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 12px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: .05em; }
+    .form-input { border: 1.5px solid var(--gray-200); border-radius: 7px; padding: 10px 12px; font-size: 13px; font-family: inherit; outline: none; transition: var(--transition); background: #fff; }
+    .form-input:focus { border-color: var(--blue); }
+    .form-section-title { font-size: 15px; font-weight: 700; margin: 24px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--gray-200); }
+    .items-table-wrap { border: 1.5px solid var(--gray-200); border-radius: 8px; overflow: hidden; }
+    .items-table { width: 100%; border-collapse: collapse; }
+    .items-table th { padding: 9px 12px; font-size: 11px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; background: var(--gray-50); border-bottom: 1px solid var(--gray-200); text-align: left; }
+    .items-table td { padding: 10px 12px; border-bottom: 1px solid var(--gray-100); }
+    .items-table tr:last-child td { border-bottom: none; }
+    .items-table input, .items-table select { border: 1.5px solid var(--gray-200); border-radius: 6px; padding: 6px 8px; font-size: 12px; outline: none; width: 100%; }
+    .items-table input:focus, .items-table select:focus { border-color: var(--blue); }
+    .add-item-row { padding: 10px 12px; background: var(--gray-50); }
+    .add-item-row button { font-size: 12px; color: var(--blue); font-weight: 600; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+
+    /* ── WORKFLOW STEPS ── */
+    .workflow { display: flex; gap: 0; margin-bottom: 28px; }
+    .workflow-step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; }
+    .workflow-step:not(:last-child)::after { content: ''; position: absolute; top: 16px; left: calc(50% + 18px); right: calc(-50% + 18px); height: 2px; background: var(--gray-200); z-index: 0; }
+    .workflow-step.done::after { background: var(--green); }
+    .workflow-step.active::after { background: linear-gradient(90deg, var(--green), var(--gray-200)); }
+    .step-circle { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--gray-200); background: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; z-index: 1; color: var(--gray-400); margin-bottom: 8px; }
+    .workflow-step.done .step-circle { background: var(--green); border-color: var(--green); color: #fff; }
+    .workflow-step.active .step-circle { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .step-label { font-size: 11px; font-weight: 600; color: var(--gray-400); text-align: center; }
+    .workflow-step.done .step-label, .workflow-step.active .step-label { color: var(--text); }
+
+    /* ── DELIVERY CARD ── */
+    .delivery-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); padding: 20px; box-shadow: var(--shadow-sm); }
+    .delivery-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .delivery-card-title { font-size: 14px; font-weight: 700; }
+    .delivery-card-sub { font-size: 12px; color: var(--gray-600); margin-top: 2px; }
+    .delivery-timeline { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+    .timeline-item { display: flex; align-items: flex-start; gap: 12px; }
+    .timeline-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+    .timeline-item p { font-size: 12px; color: var(--gray-600); }
+    .timeline-item strong { font-size: 13px; display: block; }
+    .grid-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    @media(max-width:700px){ .grid-cards{ grid-template-columns: 1fr; } }
+
+    /* ── TOAST ── */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--green); color: #fff; border-radius: 8px; padding: 14px 20px; font-size: 14px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.2); z-index: 500; display: flex; align-items: center; gap: 10px; transform: translateY(100px); opacity: 0; transition: .35s ease; }
+    .toast.show { transform: none; opacity: 1; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--gray-400); }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── BACK LINK ── */
+    .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--blue); font-weight: 600; margin-bottom: 4px; cursor: pointer; background: none; border: none; }
+    .back-link:hover { text-decoration: underline; }
+
+    /* mobile sidebar toggle */
+    @media(max-width:700px){
+      .sidebar { transform: translateX(-100%); transition: var(--transition); }
+      .sidebar.open { transform: none; }
+      .main { margin-left: 0; padding: 16px; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ TOP BAR ══ -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">🏗️ Constro<span>ERP</span></div>
+    <div class="topbar-module">Módulo Suprimentos</div>
+  </div>
+  <div class="topbar-right">
+    <button class="notif-btn" onclick="showToast('3 pedidos aguardando sua aprovação','📋')">
+      🔔 <span class="notif-badge">3</span>
+    </button>
+    <div class="user-pill">
+      <div class="user-avatar">RC</div>
+      Ricardo Costa
+    </div>
+    <a href="index.html" style="color:rgba(255,255,255,.7);font-size:12px;font-weight:600">← Site principal</a>
+  </div>
+</div>
+
+<!-- ══ SIDEBAR ══ -->
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Visão Geral</div>
+    <button class="nav-item active" onclick="showPage('dashboard')">
+      <span class="icon">📊</span> Dashboard
+    </button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Solicitações</div>
+    <button class="nav-item" onclick="showPage('solicitacoes')">
+      <span class="icon">📝</span> Minhas Solicitações
+      <span class="nav-badge blue">4</span>
+    </button>
+    <button class="nav-item" onclick="showPage('nova-solicitacao')">
+      <span class="icon">➕</span> Nova Solicitação
+    </button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Pedidos de Compra</div>
+    <button class="nav-item" onclick="showPage('pedidos')">
+      <span class="icon">🛒</span> Todos os Pedidos
+    </button>
+    <button class="nav-item" onclick="showPage('aprovacoes')">
+      <span class="icon">✅</span> Aprovações Pendentes
+      <span class="nav-badge">3</span>
+    </button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Acompanhamento</div>
+    <button class="nav-item" onclick="showPage('entregas')">
+      <span class="icon">🚚</span> Previsão de Entrega
+    </button>
+    <button class="nav-item" onclick="showPage('fornecedores')">
+      <span class="icon">🏭</span> Fornecedores
+    </button>
+  </div>
+  <div class="sidebar-footer">
+    <button class="nav-item" style="color:var(--gray-400)">
+      <span class="icon">⚙️</span> Configurações
+    </button>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<main class="main">
+
+  <!-- ════ DASHBOARD ════ -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div>
+        <h1>Bom dia, Ricardo 👋</h1>
+        <p>Visão geral do módulo de Suprimentos — atualizado agora</p>
+      </div>
+      <button class="btn btn-primary" onclick="showPage('nova-solicitacao')">+ Nova Solicitação</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="label">Pedidos Pendentes</div>
+        <div class="value" style="color:var(--orange)">3</div>
+        <div class="delta warn">⏳ Aguardando aprovação</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Em Cotação</div>
+        <div class="value" style="color:var(--blue)">7</div>
+        <div class="delta">Equipe de compras</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Autorizados Hoje</div>
+        <div class="value" style="color:var(--green)">5</div>
+        <div class="delta up">↑ 2 a mais que ontem</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Entregas Previstas</div>
+        <div class="value">12</div>
+        <div class="delta">Próximos 7 dias</div>
+      </div>
+    </div>
+
+    <!-- Workflow visual -->
+    <div class="table-card" style="margin-bottom:24px;padding:24px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:20px">Fluxo do Processo de Suprimentos</div>
+      <div class="workflow">
+        <div class="workflow-step done">
+          <div class="step-circle">✓</div>
+          <div class="step-label">Solicitação<br>de Compra</div>
+        </div>
+        <div class="workflow-step done">
+          <div class="step-circle">✓</div>
+          <div class="step-label">Recebida<br>no ERP</div>
+        </div>
+        <div class="workflow-step done">
+          <div class="step-circle">✓</div>
+          <div class="step-label">Cotação<br>Fornecedores</div>
+        </div>
+        <div class="workflow-step active">
+          <div class="step-circle">4</div>
+          <div class="step-label">Aguardando<br>Autorização</div>
+        </div>
+        <div class="workflow-step">
+          <div class="step-circle">5</div>
+          <div class="step-label">Pedido<br>Autorizado</div>
+        </div>
+        <div class="workflow-step">
+          <div class="step-circle">6</div>
+          <div class="step-label">Entrega<br>na Obra</div>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:13px;color:var(--gray-600)">
+        Você tem <strong style="color:var(--orange)">3 pedidos</strong> aguardando sua autorização.
+        <button onclick="showPage('aprovacoes')" style="background:none;border:none;color:var(--blue);font-weight:700;cursor:pointer;font-size:13px;margin-left:4px">Revisar agora →</button>
+      </div>
+    </div>
+
+    <!-- Two columns -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" class="dash-cols">
+      <div class="table-card" style="padding:20px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+          Pedidos Recentes
+          <button onclick="showPage('pedidos')" class="btn btn-outline btn-sm">Ver todos</button>
+        </div>
+        <table>
+          <thead><tr><th>OC #</th><th>Material</th><th>Valor</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr onclick="openDetail('OC-2041')" style="cursor:pointer"><td><strong>OC-2041</strong></td><td>Cimento CP II</td><td>R$ 78.960</td><td><span class="tag tag-orange">Ag. Aprovação</span></td></tr>
+            <tr onclick="openDetail('OC-2040')" style="cursor:pointer"><td><strong>OC-2040</strong></td><td>Vergalhão CA-50</td><td>R$ 151.200</td><td><span class="tag tag-orange">Ag. Aprovação</span></td></tr>
+            <tr onclick="openDetail('OC-2039')" style="cursor:pointer"><td><strong>OC-2039</strong></td><td>Tijolo 9cm</td><td>R$ 34.000</td><td><span class="tag tag-blue">Em Cotação</span></td></tr>
+            <tr><td><strong>OC-2038</strong></td><td>Areia Fina</td><td>R$ 14.160</td><td><span class="tag tag-green">Autorizado</span></td></tr>
+            <tr><td><strong>OC-2037</strong></td><td>Brita 3/4</td><td>R$ 9.800</td><td><span class="tag tag-green">Autorizado</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-card" style="padding:20px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+          Próximas Entregas
+          <button onclick="showPage('entregas')" class="btn btn-outline btn-sm">Ver todas</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--green-light);border-radius:8px">
+            <div><div style="font-size:13px;font-weight:700">Cimento CP II — 2.400 sc</div><div style="font-size:11px;color:var(--gray-600)">Obra: Residencial Palmeiras</div></div>
+            <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--green)">Amanhã</div><div style="font-size:10px;color:var(--gray-600)">10/06/2026</div></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--blue-light);border-radius:8px">
+            <div><div style="font-size:13px;font-weight:700">Vergalhão CA-50 — 18 t</div><div style="font-size:11px;color:var(--gray-600)">Obra: Torres Azul</div></div>
+            <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--blue)">12/06</div><div style="font-size:10px;color:var(--gray-600)">Confirmado</div></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--orange-light);border-radius:8px">
+            <div><div style="font-size:13px;font-weight:700">Areia Fina — 120 m³</div><div style="font-size:11px;color:var(--gray-600)">Obra: Loteamento Bela Vista</div></div>
+            <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--orange)">15/06</div><div style="font-size:10px;color:var(--gray-600)">A confirmar</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ SOLICITAÇÕES ════ -->
+  <div class="page" id="page-solicitacoes">
+    <div class="page-header">
+      <div><h1>Minhas Solicitações</h1><p>Solicitações de compra criadas pela equipe de obra</p></div>
+      <button class="btn btn-primary" onclick="showPage('nova-solicitacao')">+ Nova Solicitação</button>
+    </div>
+    <div class="table-card">
+      <div class="table-toolbar">
+        <h2>Solicitações de Compra</h2>
+        <input class="search-input" placeholder="🔍 Buscar por obra ou material...">
+      </div>
+      <div class="filter-row">
+        <button class="filter-btn active">Todas</button>
+        <button class="filter-btn">Abertas</button>
+        <button class="filter-btn">Em cotação</button>
+        <button class="filter-btn">Convertidas</button>
+        <button class="filter-btn">Canceladas</button>
+      </div>
+      <table>
+        <thead><tr><th>SC #</th><th>Obra</th><th>Responsável</th><th>Itens</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>
+          <tr><td><strong>SC-0582</strong></td><td>Residencial Palmeiras</td><td>Eng. Rafael M.</td><td>4 itens</td><td>08/06/2026</td><td><span class="tag tag-blue">Em cotação</span></td><td><div class="row-actions"><button class="btn btn-outline btn-sm" onclick="openDetail('SC-0582')">Detalhes</button></div></td></tr>
+          <tr><td><strong>SC-0581</strong></td><td>Torres Azul</td><td>Eng. Patrícia L.</td><td>7 itens</td><td>07/06/2026</td><td><span class="tag tag-green">Convertida em OC</span></td><td><div class="row-actions"><button class="btn btn-outline btn-sm" onclick="openDetail('SC-0581')">Detalhes</button></div></td></tr>
+          <tr><td><strong>SC-0580</strong></td><td>Parque das Flores</td><td>Eng. José A.</td><td>2 itens</td><td>06/06/2026</td><td><span class="tag tag-orange">Aguardando cotação</span></td><td><div class="row-actions"><button class="btn btn-outline btn-sm">Detalhes</button></div></td></tr>
+          <tr><td><strong>SC-0579</strong></td><td>Residencial Palmeiras</td><td>Eng. Rafael M.</td><td>5 itens</td><td>05/06/2026</td><td><span class="tag tag-green">Convertida em OC</span></td><td><div class="row-actions"><button class="btn btn-outline btn-sm">Detalhes</button></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════ NOVA SOLICITAÇÃO ════ -->
+  <div class="page" id="page-nova-solicitacao">
+    <div class="page-header">
+      <div>
+        <button class="back-link" onclick="showPage('solicitacoes')">← Voltar às Solicitações</button>
+        <h1>Nova Solicitação de Compra</h1>
+        <p>Preencha os dados e adicione os insumos necessários</p>
+      </div>
+    </div>
+    <div class="form-card">
+      <form id="formSolicitacao" onsubmit="submitSolicitacao(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Obra *</label>
+            <select class="form-input" required>
+              <option value="">Selecionar obra...</option>
+              <option>Residencial Palmeiras</option>
+              <option>Torres Azul</option>
+              <option>Parque das Flores</option>
+              <option>Loteamento Bela Vista</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Centro de Custo *</label>
+            <select class="form-input" required>
+              <option value="">Selecionar...</option>
+              <option>001 – Fundações</option>
+              <option>002 – Estrutura</option>
+              <option>003 – Alvenaria</option>
+              <option>004 – Instalações</option>
+              <option>005 – Acabamento</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data de Necessidade *</label>
+            <input class="form-input" type="date" required value="2026-06-20">
+          </div>
+          <div class="form-group">
+            <label>Prioridade</label>
+            <select class="form-input">
+              <option>Normal</option>
+              <option>Alta</option>
+              <option>Urgente</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Observações</label>
+            <textarea class="textarea form-input" placeholder="Informações adicionais para a equipe de compras..."></textarea>
+          </div>
+        </div>
+
+        <div class="form-section-title">Itens da Solicitação</div>
+        <div class="items-table-wrap">
+          <table class="items-table" id="itensSolicitacao">
+            <thead><tr><th>Insumo / Material</th><th>Unidade</th><th>Quantidade</th><th>Observação</th><th></th></tr></thead>
+            <tbody id="itensBody">
+              <tr>
+                <td><input type="text" placeholder="Ex: Cimento CP II" class="form-input" style="min-width:160px"></td>
+                <td><select style="width:80px;border:1.5px solid var(--gray-200);border-radius:6px;padding:6px 8px;font-size:12px"><option>sc</option><option>m³</option><option>kg</option><option>t</option><option>un</option><option>m²</option><option>l</option></select></td>
+                <td><input type="number" value="100" min="1" style="width:80px;border:1.5px solid var(--gray-200);border-radius:6px;padding:6px 8px;font-size:12px"></td>
+                <td><input type="text" placeholder="Opcional" style="border:1.5px solid var(--gray-200);border-radius:6px;padding:6px 8px;font-size:12px;width:100%"></td>
+                <td><button type="button" onclick="removeRow(this)" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">✕</button></td>
+              </tr>
+              <tr>
+                <td><input type="text" placeholder="Ex: Vergalhão CA-50" class="form-input" style="min-width:160px"></td>
+                <td><select style="width:80px;border:1.5px solid var(--gray-200);border-radius:6px;padding:6px 8px;font-size:12px"><option>t</option><option>sc</option><option>m³</option><option>kg</option><option>un</option></select></td>
+                <td><input type="number" value="5" min="1" style="width:80px;border:1.5px solid var(--gray-200);border-radius:6px;padding:6px 8px;font-size:12px"></td>
+                <td><input type="text" placeholder="Opcional" style="border:1.5px solid var(--gray-200);border-radius:6px;padding:6px 8px;font-size:12px;width:100%"></td>
+                <td><button type="button" onclick="removeRow(this)" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">✕</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="add-item-row">
+            <button type="button" onclick="addItemRow()">➕ Adicionar item</button>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px">
+          <button type="button" class="btn btn-outline" onclick="showPage('solicitacoes')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Enviar Solicitação ao ERP →</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════ PEDIDOS ════ -->
+  <div class="page" id="page-pedidos">
+    <div class="page-header">
+      <div><h1>Pedidos de Compra</h1><p>Todos os pedidos — endpoint: GET /purchase-orders</p></div>
+    </div>
+    <div class="table-card">
+      <div class="table-toolbar">
+        <h2>Pedidos de Compra</h2>
+        <div style="display:flex;gap:10px">
+          <input class="search-input" placeholder="🔍 Buscar pedido, fornecedor...">
+        </div>
+      </div>
+      <div class="filter-row">
+        <button class="filter-btn active">Todos (24)</button>
+        <button class="filter-btn">Ag. Aprovação (3)</button>
+        <button class="filter-btn">Em Cotação (7)</button>
+        <button class="filter-btn">Autorizados (11)</button>
+        <button class="filter-btn">Entregues (3)</button>
+      </div>
+      <table>
+        <thead><tr><th>OC #</th><th>Fornecedor</th><th>Obra</th><th>Valor Total</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>
+          <tr><td><strong>OC-2041</strong></td><td>Cimento Nacional Ltda</td><td>Palmeiras</td><td><strong>R$ 78.960</strong></td><td>15/06/2026</td><td><span class="tag tag-orange">Ag. Aprovação</span></td><td><div class="row-actions"><button class="btn btn-outline btn-sm" onclick="openDetail('OC-2041')">Revisar</button><button class="btn btn-success btn-sm" onclick="approveItem('OC-2041')">✓ Aprovar</button></div></td></tr>
+          <tr><td><strong>OC-2040</strong></td><td>AçoFácil Distribuidora</td><td>Torres Azul</td><td><strong>R$ 151.200</strong></td><td>18/06/2026</td><td><span class="tag tag-orange">Ag. Aprovação</span></td><td><div class="row-actions"><button class="btn btn-outline btn-sm" onclick="openDetail('OC-2040')">Revisar</button><button class="btn btn-success btn-sm" onclick="approveItem('OC-2040')">✓ Aprovar</button></div></td></tr>
+          <tr><td><strong>OC-2039</strong></td><td>—</td><td>Bela Vista</td><td><strong>R$ 34.000</strong></td><td>—</td><td><span class="tag tag-blue">Em Cotação</span></td><td><div class="row-actions"><button class="btn btn-outline btn-sm">Detalhes</button></div></td></tr>
+          <tr><td><strong>OC-2038</strong></td><td>Areias do Norte ME</td><td>Bela Vista</td><td><strong>R$ 14.160</strong></td><td>12/06/2026</td><td><span class="tag tag-green">Autorizado</span></td><td><div class="row-actions"><button class="btn btn-outline btn-sm">Detalhes</button></div></td></tr>
+          <tr><td><strong>OC-2037</strong></td><td>Britagem Qualidade SA</td><td>Palmeiras</td><td><strong>R$ 9.800</strong></td><td>10/06/2026</td><td><span class="tag tag-green">Autorizado</span></td><td><div class="row-actions"><button class="btn btn-outline btn-sm">Detalhes</button></div></td></tr>
+          <tr><td><strong>OC-2036</strong></td><td>Casa da Construção</td><td>Flores</td><td><strong>R$ 22.400</strong></td><td>08/06/2026</td><td><span class="tag tag-green">Entregue</span></td><td><div class="row-actions"><button class="btn btn-outline btn-sm">Detalhes</button></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════ APROVAÇÕES ════ -->
+  <div class="page" id="page-aprovacoes">
+    <div class="page-header">
+      <div><h1>Aprovações Pendentes</h1><p>3 pedidos aguardando sua autorização — endpoint: PUT /purchase-orders/{id}/authorize</p></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px" id="aprovList">
+      <!-- OC-2041 -->
+      <div class="table-card" style="padding:24px" id="card-OC-2041">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+              <strong style="font-size:16px">OC-2041</strong>
+              <span class="tag tag-orange">Ag. Aprovação</span>
+            </div>
+            <div style="font-size:13px;color:var(--gray-600)">Cimento Nacional Ltda · Obra: Residencial Palmeiras</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:900">R$ 78.960</div>
+            <div style="font-size:12px;color:var(--gray-600)">Venc: 15/06/2026 · 2.400 sacos</div>
+          </div>
+        </div>
+        <div style="margin:16px 0;background:var(--gray-50);border-radius:8px;padding:14px;font-size:13px">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <div><div style="font-size:10px;color:var(--gray-400);font-weight:700;text-transform:uppercase">Melhor cotação</div><div style="font-weight:700;color:var(--green)">R$ 32,90/sc ✓</div></div>
+            <div><div style="font-size:10px;color:var(--gray-400);font-weight:700;text-transform:uppercase">Cond. Pagamento</div><div style="font-weight:700">30/60/90 dias</div></div>
+            <div><div style="font-size:10px;color:var(--gray-400);font-weight:700;text-transform:uppercase">Prazo Entrega</div><div style="font-weight:700">10/06/2026</div></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-success" onclick="approveItem('OC-2041')">✓ Autorizar Pedido</button>
+          <button class="btn btn-outline" onclick="openDetail('OC-2041')">Ver detalhes completos</button>
+          <button class="btn btn-danger btn-sm" onclick="rejectItem('OC-2041')">✕ Recusar</button>
+        </div>
+      </div>
+
+      <!-- OC-2040 -->
+      <div class="table-card" style="padding:24px" id="card-OC-2040">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+              <strong style="font-size:16px">OC-2040</strong>
+              <span class="tag tag-orange">Ag. Aprovação</span>
+            </div>
+            <div style="font-size:13px;color:var(--gray-600)">AçoFácil Distribuidora · Obra: Torres Azul</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:900">R$ 151.200</div>
+            <div style="font-size:12px;color:var(--gray-600)">Venc: 18/06/2026 · 18 toneladas</div>
+          </div>
+        </div>
+        <div style="margin:16px 0;background:var(--yellow-light);border-radius:8px;padding:14px;font-size:13px;border:1px solid #fde68a">
+          ⚠️ <strong>Valor 12% acima do orçado.</strong> Justificativa: alta do aço na última semana. Engenheiro aprovou a necessidade.
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-success" onclick="approveItem('OC-2040')">✓ Autorizar com Ressalva</button>
+          <button class="btn btn-outline" onclick="openDetail('OC-2040')">Ver detalhes completos</button>
+          <button class="btn btn-danger btn-sm" onclick="rejectItem('OC-2040')">✕ Recusar</button>
+        </div>
+      </div>
+
+      <!-- OC-2042 -->
+      <div class="table-card" style="padding:24px" id="card-OC-2042">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+              <strong style="font-size:16px">OC-2042</strong>
+              <span class="tag tag-orange">Ag. Aprovação</span>
+            </div>
+            <div style="font-size:13px;color:var(--gray-600)">Tintas & Cia · Obra: Parque das Flores</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:900">R$ 18.750</div>
+            <div style="font-size:12px;color:var(--gray-600)">Venc: 25/06/2026 · 500 latas</div>
+          </div>
+        </div>
+        <div style="margin:16px 0;background:var(--gray-50);border-radius:8px;padding:14px;font-size:13px">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <div><div style="font-size:10px;color:var(--gray-400);font-weight:700;text-transform:uppercase">Preço unitário</div><div style="font-weight:700;color:var(--green)">R$ 37,50/lt ✓</div></div>
+            <div><div style="font-size:10px;color:var(--gray-400);font-weight:700;text-transform:uppercase">Cond. Pagamento</div><div style="font-weight:700">À vista</div></div>
+            <div><div style="font-size:10px;color:var(--gray-400);font-weight:700;text-transform:uppercase">Prazo Entrega</div><div style="font-weight:700">22/06/2026</div></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-success" onclick="approveItem('OC-2042')">✓ Autorizar Pedido</button>
+          <button class="btn btn-outline" onclick="openDetail('OC-2042')">Ver detalhes completos</button>
+          <button class="btn btn-danger btn-sm" onclick="rejectItem('OC-2042')">✕ Recusar</button>
+        </div>
+      </div>
+
+      <div id="emptyAprov" class="empty-state" style="display:none">
+        <div class="icon">🎉</div>
+        <p>Nenhum pedido pendente. Todos aprovados!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ ENTREGAS ════ -->
+  <div class="page" id="page-entregas">
+    <div class="page-header">
+      <div><h1>Previsão de Entrega</h1><p>Acompanhe as entregas programadas para as obras — endpoint: GET /.../delivery-schedules</p></div>
+    </div>
+    <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
+      <div class="stat-card"><div class="label">Entregas Hoje</div><div class="value" style="color:var(--green)">2</div><div class="delta up">Confirmar recebimento</div></div>
+      <div class="stat-card"><div class="label">Esta Semana</div><div class="value" style="color:var(--blue)">7</div><div class="delta">Próximos 7 dias</div></div>
+      <div class="stat-card"><div class="label">Em Atraso</div><div class="value" style="color:var(--red)">1</div><div class="delta down">Verificar com fornecedor</div></div>
+    </div>
+    <div class="grid-cards">
+      <div class="delivery-card">
+        <div class="delivery-card-header">
+          <div><div class="delivery-card-title">Cimento CP II — 2.400 sc</div><div class="delivery-card-sub">OC-2038 · Cimento Nacional Ltda</div></div>
+          <span class="tag tag-green">Confirmada</span>
+        </div>
+        <div style="font-size:12px;display:flex;gap:16px;flex-wrap:wrap;color:var(--gray-600)">
+          <span>📍 Residencial Palmeiras</span>
+          <span>📅 09/06/2026 (Hoje)</span>
+          <span>🕐 Entre 8h e 12h</span>
+        </div>
+        <div class="delivery-timeline" style="margin-top:12px">
+          <div class="timeline-item"><div class="timeline-dot" style="background:var(--green)"></div><div><strong>Pedido Autorizado</strong><p>07/06/2026</p></div></div>
+          <div class="timeline-item"><div class="timeline-dot" style="background:var(--green)"></div><div><strong>NF emitida pelo fornecedor</strong><p>08/06/2026 — NF 002.847</p></div></div>
+          <div class="timeline-item"><div class="timeline-dot" style="background:var(--blue)"></div><div><strong>Entrega prevista</strong><p>09/06/2026 entre 8h–12h</p></div></div>
+        </div>
+      </div>
+      <div class="delivery-card">
+        <div class="delivery-card-header">
+          <div><div class="delivery-card-title">Vergalhão CA-50 — 18 t</div><div class="delivery-card-sub">OC-2040 · AçoFácil Distribuidora</div></div>
+          <span class="tag tag-blue">Agendada</span>
+        </div>
+        <div style="font-size:12px;display:flex;gap:16px;flex-wrap:wrap;color:var(--gray-600)">
+          <span>📍 Torres Azul</span>
+          <span>📅 12/06/2026</span>
+          <span>🕐 Manhã</span>
+        </div>
+        <div class="delivery-timeline" style="margin-top:12px">
+          <div class="timeline-item"><div class="timeline-dot" style="background:var(--green)"></div><div><strong>Pedido Autorizado</strong><p>08/06/2026</p></div></div>
+          <div class="timeline-item"><div class="timeline-dot" style="background:var(--orange)"></div><div><strong>Aguardando NF do fornecedor</strong><p>Previsão: 10/06/2026</p></div></div>
+          <div class="timeline-item"><div class="timeline-dot" style="background:var(--gray-200)"></div><div><strong>Entrega prevista</strong><p>12/06/2026</p></div></div>
+        </div>
+      </div>
+      <div class="delivery-card">
+        <div class="delivery-card-header">
+          <div><div class="delivery-card-title">Areia Fina — 120 m³</div><div class="delivery-card-sub">OC-2037 · Areias do Norte ME</div></div>
+          <span class="tag tag-red">Em atraso</span>
+        </div>
+        <div style="font-size:12px;display:flex;gap:16px;flex-wrap:wrap;color:var(--gray-600)">
+          <span>📍 Loteamento Bela Vista</span>
+          <span>📅 Previsto 05/06 — 4 dias</span>
+        </div>
+        <div style="background:var(--red-light);border-radius:8px;padding:10px;margin-top:12px;font-size:12px;color:var(--red)">
+          ⚠️ Fornecedor informou problema logístico. Nova previsão: 13/06/2026. <button style="background:none;border:none;color:var(--blue);cursor:pointer;font-weight:700;font-size:12px">Registrar ocorrência</button>
+        </div>
+      </div>
+      <div class="delivery-card">
+        <div class="delivery-card-header">
+          <div><div class="delivery-card-title">Brita 3/4 — 80 m³</div><div class="delivery-card-sub">OC-2036 · Britagem Qualidade SA</div></div>
+          <span class="tag tag-orange">A confirmar</span>
+        </div>
+        <div style="font-size:12px;display:flex;gap:16px;flex-wrap:wrap;color:var(--gray-600)">
+          <span>📍 Residencial Palmeiras</span>
+          <span>📅 15/06/2026</span>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--gray-600)">Aguardando confirmação do agendamento pelo fornecedor.</div>
+        <button class="btn btn-outline btn-sm" style="margin-top:12px">Contatar fornecedor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ FORNECEDORES ════ -->
+  <div class="page" id="page-fornecedores">
+    <div class="page-header">
+      <div><h1>Fornecedores</h1><p>Cadastro e histórico de desempenho dos fornecedores</p></div>
+      <button class="btn btn-primary">+ Novo Fornecedor</button>
+    </div>
+    <div class="table-card">
+      <div class="table-toolbar">
+        <h2>Fornecedores Cadastrados</h2>
+        <input class="search-input" placeholder="🔍 Buscar fornecedor...">
+      </div>
+      <table>
+        <thead><tr><th>Razão Social</th><th>CNPJ</th><th>Especialidade</th><th>Avaliação</th><th>Entregas no Prazo</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Cimento Nacional Ltda</strong></td><td>12.345.678/0001-00</td><td>Materiais básicos</td><td>★★★★★ <span style="font-size:11px;color:var(--gray-400)">(4.8)</span></td><td><span style="color:var(--green);font-weight:700">96%</span></td><td><span class="tag tag-green">Aprovado</span></td></tr>
+          <tr><td><strong>AçoFácil Distribuidora</strong></td><td>98.765.432/0001-11</td><td>Ferro e aço</td><td>★★★★☆ <span style="font-size:11px;color:var(--gray-400)">(4.2)</span></td><td><span style="color:var(--green);font-weight:700">89%</span></td><td><span class="tag tag-green">Aprovado</span></td></tr>
+          <tr><td><strong>Areias do Norte ME</strong></td><td>55.432.198/0001-22</td><td>Agregados</td><td>★★★☆☆ <span style="font-size:11px;color:var(--gray-400)">(3.1)</span></td><td><span style="color:var(--red);font-weight:700">71%</span></td><td><span class="tag tag-yellow">Em análise</span></td></tr>
+          <tr><td><strong>Britagem Qualidade SA</strong></td><td>44.321.987/0001-33</td><td>Agregados</td><td>★★★★★ <span style="font-size:11px;color:var(--gray-400)">(4.6)</span></td><td><span style="color:var(--green);font-weight:700">93%</span></td><td><span class="tag tag-green">Aprovado</span></td></tr>
+          <tr><td><strong>Tintas & Cia Ltda</strong></td><td>77.654.321/0001-44</td><td>Tintas e vernizes</td><td>★★★★☆ <span style="font-size:11px;color:var(--gray-400)">(4.0)</span></td><td><span style="color:var(--blue);font-weight:700">82%</span></td><td><span class="tag tag-green">Aprovado</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- ══ DETAIL PANEL ══ -->
+<div class="panel-overlay" id="panelOverlay" onclick="if(event.target===this)closePanel()">
+  <div class="panel">
+    <div class="panel-header">
+      <h3 id="panelTitle">Detalhe do Pedido</h3>
+      <button class="panel-close" onclick="closePanel()">×</button>
+    </div>
+    <div class="panel-body" id="panelBody"></div>
+    <div class="panel-footer" id="panelFooter"></div>
+  </div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div class="toast" id="toast">
+  <span id="toastIcon">✅</span>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+  // ── NAVIGATION ──
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => {
+      if (n.textContent.trim().startsWith({
+        'dashboard':'Dashboard','solicitacoes':'Minhas','nova-solicitacao':'Nova Sol',
+        'pedidos':'Todos os','aprovacoes':'Aprovações','entregas':'Previsão','fornecedores':'Forne'
+      }[id] || '???')) n.classList.add('active');
+    });
+    window.scrollTo(0,0);
+  }
+
+  // ── FORM ──
+  function addItemRow() {
+    const tbody = document.getElementById('itensBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><input type="text" placeholder="Nome do material" style="min-width:160px;border:1.5px solid var(--gray-200);border-radius:6px;padding:6px 8px;font-size:12px;width:100%"></td>
+      <td><select style="width:80px;border:1.5px solid var(--gray-200);border-radius:6px;padding:6px 8px;font-size:12px"><option>un</option><option>sc</option><option>m³</option><option>kg</option><option>t</option><option>m²</option><option>l</option></select></td>
+      <td><input type="number" value="1" min="1" style="width:80px;border:1.5px solid var(--gray-200);border-radius:6px;padding:6px 8px;font-size:12px"></td>
+      <td><input type="text" placeholder="Opcional" style="border:1.5px solid var(--gray-200);border-radius:6px;padding:6px 8px;font-size:12px;width:100%"></td>
+      <td><button type="button" onclick="removeRow(this)" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer">✕</button></td>`;
+    tbody.appendChild(tr);
+  }
+  function removeRow(btn) {
+    const tbody = document.getElementById('itensBody');
+    if (tbody.rows.length > 1) btn.closest('tr').remove();
+  }
+  function submitSolicitacao(e) {
+    e.preventDefault();
+    showToast('Solicitação SC-0583 enviada ao ERP com sucesso!', '📤');
+    setTimeout(() => showPage('solicitacoes'), 1200);
+  }
+
+  // ── DETAIL PANEL ──
+  const details = {
+    'OC-2041': {
+      title: 'Pedido OC-2041 — Cimento CP II',
+      body: `
+        <div class="detail-section">
+          <h4>Informações do Pedido</h4>
+          <div class="detail-grid">
+            <div class="detail-field"><label>Fornecedor</label><span>Cimento Nacional Ltda</span></div>
+            <div class="detail-field"><label>Obra</label><span>Residencial Palmeiras</span></div>
+            <div class="detail-field"><label>Data Emissão</label><span>06/06/2026</span></div>
+            <div class="detail-field"><label>Vencimento</label><span>15/06/2026</span></div>
+            <div class="detail-field"><label>Cond. Pagamento</label><span>30/60/90 dias</span></div>
+            <div class="detail-field"><label>Status</label><span class="tag tag-orange">Ag. Aprovação</span></div>
+          </div>
+        </div>
+        <div class="detail-section">
+          <h4>Itens do Pedido</h4>
+          <table class="detail-items">
+            <thead><tr><th>Insumo</th><th>Qtd</th><th>Un</th><th>Preço Un</th><th>Total</th></tr></thead>
+            <tbody>
+              <tr><td>Cimento CP II 50kg</td><td>2.400</td><td>sc</td><td>R$ 32,90</td><td>R$ 78.960,00</td></tr>
+            </tbody>
+          </table>
+          <div style="text-align:right;margin-top:10px;font-size:15px;font-weight:800">Total: R$ 78.960,00</div>
+        </div>
+        <div class="detail-section">
+          <h4>Comparativo de Fornecedores</h4>
+          <table class="detail-items">
+            <thead><tr><th>Fornecedor</th><th>Preço Un</th><th>Total</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>Cimento Nacional Ltda</td><td>R$ 32,90</td><td>R$ 78.960</td><td><span class="tag tag-green">Selecionado</span></td></tr>
+              <tr><td>Depósito ABC</td><td>R$ 34,50</td><td>R$ 82.800</td><td></td></tr>
+              <tr><td>Material Max</td><td>R$ 33,80</td><td>R$ 81.120</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="detail-section">
+          <h4>Autorizar com Ressalva (PATCH /purchase-orders/{id}/authorize)</h4>
+          <textarea class="textarea" placeholder="Observações ou justificativas (opcional)..."></textarea>
+        </div>`,
+      footer: `<button class="btn btn-danger btn-sm" onclick="rejectItem('OC-2041');closePanel()">✕ Recusar</button>
+               <button class="btn btn-outline" onclick="closePanel()">Fechar</button>
+               <button class="btn btn-success" onclick="approveItem('OC-2041');closePanel()">✓ Autorizar Pedido</button>`
+    },
+    'OC-2040': {
+      title: 'Pedido OC-2040 — Vergalhão CA-50',
+      body: `
+        <div class="warn-box"><h4>⚠️ Valor acima do orçado</h4><p>Este pedido está 12% acima do valor orçado para vergalhão. Justificativa do eng.: alta do aço na última semana (+R$ 16.200).</p></div>
+        <div class="detail-section">
+          <h4>Informações do Pedido</h4>
+          <div class="detail-grid">
+            <div class="detail-field"><label>Fornecedor</label><span>AçoFácil Distribuidora</span></div>
+            <div class="detail-field"><label>Obra</label><span>Torres Azul</span></div>
+            <div class="detail-field"><label>Data Emissão</label><span>07/06/2026</span></div>
+            <div class="detail-field"><label>Vencimento</label><span>18/06/2026</span></div>
+            <div class="detail-field"><label>Cond. Pagamento</label><span>28 DDL</span></div>
+            <div class="detail-field"><label>Status</label><span class="tag tag-orange">Ag. Aprovação</span></div>
+          </div>
+        </div>
+        <div class="detail-section">
+          <h4>Itens do Pedido</h4>
+          <table class="detail-items">
+            <thead><tr><th>Insumo</th><th>Qtd</th><th>Un</th><th>Preço Un</th><th>Total</th></tr></thead>
+            <tbody>
+              <tr><td>Vergalhão CA-50 10mm</td><td>10</td><td>t</td><td>R$ 8.400</td><td>R$ 84.000</td></tr>
+              <tr><td>Vergalhão CA-50 12.5mm</td><td>8</td><td>t</td><td>R$ 8.400</td><td>R$ 67.200</td></tr>
+            </tbody>
+          </table>
+          <div style="text-align:right;margin-top:10px;font-size:15px;font-weight:800">Total: R$ 151.200,00</div>
+        </div>
+        <div class="detail-section">
+          <h4>Justificativa (obrigatória para aprovação com ressalva)</h4>
+          <textarea class="textarea" placeholder="Descreva a justificativa para a aprovação acima do orçado...">Alta do preço do aço semana 23/2026. Necessidade urgente para manter cronograma. Aprovado pela engenharia.</textarea>
+        </div>`,
+      footer: `<button class="btn btn-danger btn-sm" onclick="rejectItem('OC-2040');closePanel()">✕ Recusar</button>
+               <button class="btn btn-outline" onclick="closePanel()">Fechar</button>
+               <button class="btn btn-success" onclick="approveItem('OC-2040');closePanel()">✓ Autorizar com Ressalva</button>`
+    }
+  };
+
+  function openDetail(id) {
+    const d = details[id] || { title: 'Pedido ' + id, body: '<p style="color:var(--gray-600);padding:20px">Detalhes carregados via GET /purchase-orders/'+id+'</p>', footer: '<button class="btn btn-outline" onclick="closePanel()">Fechar</button>' };
+    document.getElementById('panelTitle').textContent = d.title;
+    document.getElementById('panelBody').innerHTML = d.body;
+    document.getElementById('panelFooter').innerHTML = d.footer;
+    document.getElementById('panelOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closePanel() {
+    document.getElementById('panelOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // ── APPROVE / REJECT ──
+  let pendingCount = 3;
+  function approveItem(id) {
+    const card = document.getElementById('card-' + id);
+    if (card) {
+      card.style.opacity = '.4';
+      card.style.pointerEvents = 'none';
+      card.querySelector('.tag').className = 'tag tag-green';
+      card.querySelector('.tag').textContent = 'Autorizado';
+      pendingCount--;
+      document.querySelector('.nav-badge:not(.blue)').textContent = pendingCount;
+      if (pendingCount === 0) {
+        setTimeout(() => { document.getElementById('emptyAprov').style.display = 'block'; }, 400);
+      }
+    }
+    showToast('Pedido ' + id + ' autorizado com sucesso! ERP atualizado.', '✅');
+  }
+  function rejectItem(id) {
+    const card = document.getElementById('card-' + id);
+    if (card) {
+      card.style.opacity = '.4';
+      card.style.pointerEvents = 'none';
+      pendingCount--;
+      document.querySelector('.nav-badge:not(.blue)').textContent = pendingCount;
+    }
+    showToast('Pedido ' + id + ' recusado. Equipe de compras notificada.', '❌');
+  }
+
+  // ── TOAST ──
+  function showToast(msg, icon) {
+    const t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    document.getElementById('toastIcon').textContent = icon || '✅';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3800);
+  }
+
+  // ── FILTER BUTTONS ──
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      this.closest('.filter-row').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
