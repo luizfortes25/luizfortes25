@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConstroERP — Catálogo da API Sienge (editável)</title>
+<meta name="description" content="Tudo o que a API REST do Sienge entrega de informação, organizado em tabelas editáveis por módulo — pela ótica do engenheiro civil.">
+<style>
+  :root{
+    --blue:#0052cc; --blue-dark:#003a99; --blue-light:#e8f0fe;
+    --orange:#ff6b00; --orange-light:#fff3e8;
+    --green:#16a34a; --green-light:#dcfce7;
+    --red:#dc2626; --red-light:#fee2e2;
+    --purple:#7c3aed; --purple-light:#ede9fe;
+    --yellow:#d97706; --yellow-light:#fef3c7;
+    --gray-50:#f9fafb; --gray-100:#f3f4f6; --gray-200:#e5e7eb;
+    --gray-300:#d1d5db; --gray-400:#9ca3af; --gray-600:#4b5563; --gray-800:#1f2937;
+    --white:#fff; --text:#111827;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.1); --shadow:0 4px 16px rgba(0,0,0,.1);
+    --radius:12px; --transition:.2s ease;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--gray-50);color:var(--text);line-height:1.55;}
+  a{text-decoration:none;color:inherit;}
+  button{cursor:pointer;font-family:inherit;}
+  .container{max-width:1240px;margin:0 auto;padding:0 22px;}
+
+  /* ── TOP BAR ── */
+  .topbar{position:sticky;top:0;z-index:100;background:var(--blue-dark);color:#fff;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:0 22px;height:60px;box-shadow:0 2px 10px rgba(0,0,0,.18);}
+  .topbar .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.3px;}
+  .topbar .brand .dot{width:11px;height:11px;border-radius:3px;background:var(--orange);transform:rotate(45deg);}
+  .topbar .brand small{font-weight:500;font-size:12px;color:#9fc0ff;letter-spacing:0;}
+  .topbar nav{display:flex;gap:6px;flex-wrap:wrap;}
+  .topbar nav a{color:#cfe0ff;font-size:13.5px;font-weight:500;padding:7px 12px;border-radius:7px;transition:var(--transition);}
+  .topbar nav a:hover{background:rgba(255,255,255,.12);color:#fff;}
+  .topbar nav a.home{color:#fff;}
+
+  /* ── HERO ── */
+  .hero{background:linear-gradient(135deg,#003a99 0%,#0052cc 60%,#1565ff 100%);color:#fff;padding:54px 0 120px;position:relative;overflow:hidden;}
+  .hero::after{content:"";position:absolute;right:-120px;bottom:-160px;width:480px;height:480px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,0,.28),transparent 65%);}
+  .hero .badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
+    padding:6px 14px;border-radius:30px;font-size:12.5px;font-weight:700;letter-spacing:.04em;margin-bottom:18px;}
+  .hero h1{font-size:clamp(30px,5vw,50px);font-weight:800;line-height:1.08;letter-spacing:-1px;max-width:880px;}
+  .hero h1 .hl{color:#ffd9bf;}
+  .hero p{margin-top:16px;max-width:680px;font-size:17px;color:rgba(255,255,255,.9);}
+  .hero .eng{margin-top:22px;display:inline-flex;align-items:center;gap:12px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 16px;max-width:680px;}
+  .hero .eng .av{width:42px;height:42px;border-radius:50%;background:var(--orange);display:grid;place-items:center;font-size:22px;flex-shrink:0;}
+  .hero .eng span{font-size:13.5px;color:rgba(255,255,255,.92);}
+
+  /* ── TOOLBAR (sticky control panel) ── */
+  .toolbar{position:sticky;top:60px;z-index:90;background:#fff;border-bottom:1px solid var(--gray-200);box-shadow:var(--shadow-sm);
+    margin-top:-72px;border-radius:14px 14px 0 0;}
+  .toolbar-inner{max-width:1240px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .search{flex:1;min-width:220px;position:relative;}
+  .search input{width:100%;padding:11px 14px 11px 38px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;background:var(--gray-50);transition:var(--transition);}
+  .search input:focus{outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px var(--blue-light);}
+  .search .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--gray-400);}
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 15px;border-radius:9px;font-weight:600;font-size:13.5px;border:1.5px solid transparent;transition:var(--transition);white-space:nowrap;}
+  .btn-primary{background:var(--orange);color:#fff;}
+  .btn-primary:hover{background:#e85f00;transform:translateY(-1px);box-shadow:0 5px 16px rgba(255,107,0,.32);}
+  .btn-ghost{background:var(--gray-100);color:var(--gray-800);border-color:var(--gray-200);}
+  .btn-ghost:hover{background:var(--gray-200);}
+  .btn-blue{background:var(--blue);color:#fff;}
+  .btn-blue:hover{background:var(--blue-dark);}
+  .toggle{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--gray-600);user-select:none;cursor:pointer;}
+  .toggle input{display:none;}
+  .toggle .sw{width:40px;height:22px;border-radius:20px;background:var(--gray-300);position:relative;transition:var(--transition);}
+  .toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:var(--transition);box-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .toggle input:checked + .sw{background:var(--green);}
+  .toggle input:checked + .sw::after{transform:translateX(18px);}
+
+  /* ── SUMMARY STRIP ── */
+  .strip{background:#fff;padding:14px 22px;border-bottom:1px solid var(--gray-200);}
+  .strip-inner{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+  .stat{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:11px;padding:13px 15px;}
+  .stat label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);}
+  .stat strong{display:block;font-size:24px;font-weight:800;color:var(--blue-dark);margin-top:3px;}
+
+  /* ── MODULES ── */
+  main{padding:30px 0 90px;}
+  .module{background:#fff;border:1px solid var(--gray-200);border-radius:14px;box-shadow:var(--shadow-sm);margin-bottom:24px;overflow:hidden;}
+  .module-head{display:flex;align-items:center;gap:14px;padding:18px 20px;cursor:pointer;border-left:5px solid var(--blue);}
+  .module-head .mi{width:46px;height:46px;border-radius:12px;background:var(--blue-light);display:grid;place-items:center;font-size:24px;flex-shrink:0;}
+  .module-head .mt{flex:1;min-width:0;}
+  .module-head .mt h3{font-size:18px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:10px;}
+  .module-head .mt h3 [contenteditable]{outline:none;}
+  .module-head .mt p{font-size:13px;color:var(--gray-600);margin-top:2px;}
+  .module-head .count{background:var(--gray-100);color:var(--gray-600);font-size:12px;font-weight:700;padding:4px 11px;border-radius:20px;}
+  .module-head .chev{color:var(--gray-400);transition:var(--transition);font-size:13px;}
+  .module.collapsed .chev{transform:rotate(-90deg);}
+  .module.collapsed .module-body{display:none;}
+  .module-body{padding:0 20px 20px;}
+
+  /* ── TABLE ── */
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--gray-200);border-radius:11px;}
+  table.cat{width:100%;border-collapse:collapse;font-size:13.5px;min-width:760px;}
+  table.cat th{background:var(--gray-50);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-600);font-weight:800;padding:11px 13px;border-bottom:2px solid var(--gray-200);position:sticky;top:0;}
+  table.cat td{padding:10px 13px;border-bottom:1px solid var(--gray-100);vertical-align:top;}
+  table.cat tr:last-child td{border-bottom:none;}
+  table.cat tbody tr:hover{background:var(--blue-light);}
+  table.cat td[contenteditable]{outline:none;border-radius:5px;transition:var(--transition);}
+  body.editing table.cat td[contenteditable]:hover{background:#fffbeb;box-shadow:inset 0 0 0 1.5px var(--yellow);}
+  body.editing table.cat td[contenteditable]:focus{background:#fff;box-shadow:inset 0 0 0 2px var(--blue);}
+  .col-cat{width:130px;}
+  .col-method{width:90px;}
+  .col-path{width:280px;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:12.5px;color:var(--blue-dark);}
+  .col-act{width:46px;}
+  .method{display:inline-block;min-width:48px;text-align:center;font-family:ui-monospace,monospace;font-size:10.5px;font-weight:800;letter-spacing:.4px;color:#fff;padding:3px 7px;border-radius:5px;}
+  .m-GET{background:var(--green);} .m-POST{background:var(--orange);} .m-PUT{background:var(--blue);} .m-PATCH{background:var(--yellow);} .m-DELETE{background:var(--red);}
+  .method[contenteditable]{outline:none;}
+  .cat-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--purple);background:var(--purple-light);padding:3px 9px;border-radius:6px;}
+  .del-row{width:28px;height:28px;border-radius:7px;border:none;background:transparent;color:var(--gray-400);font-size:16px;display:none;align-items:center;justify-content:center;}
+  body.editing .del-row{display:inline-flex;}
+  .del-row:hover{background:var(--red-light);color:var(--red);}
+  .row-add{display:none;margin-top:12px;gap:10px;flex-wrap:wrap;}
+  body.editing .row-add{display:flex;}
+  .module-tools{display:none;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center;}
+  body.editing .module-tools{display:flex;}
+  .mini{font-size:12.5px;padding:8px 13px;border-radius:8px;border:1.5px dashed var(--gray-300);background:#fff;color:var(--gray-600);font-weight:600;}
+  .mini:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light);}
+  .mini.danger:hover{border-color:var(--red);color:var(--red);background:var(--red-light);}
+
+  .add-module{display:none;width:100%;padding:18px;border:2px dashed var(--gray-300);border-radius:14px;background:#fff;color:var(--gray-600);font-weight:700;font-size:15px;text-align:center;transition:var(--transition);}
+  body.editing .add-module{display:block;}
+  .add-module:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-light);}
+
+  /* edit-mode banner */
+  .editbar{display:none;align-items:center;gap:10px;background:var(--yellow-light);border:1px solid #fcd34d;color:#92400e;padding:11px 16px;border-radius:11px;margin-bottom:20px;font-size:13.5px;font-weight:600;}
+  body.editing .editbar{display:flex;}
+  .editbar .badge-live{background:var(--green);color:#fff;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:800;}
+
+  .saved-tag{font-size:12px;color:var(--green);font-weight:700;opacity:0;transition:opacity .3s;}
+  .saved-tag.show{opacity:1;}
+
+  footer{background:#0a1628;color:#9fb3c8;padding:34px 0;font-size:13px;}
+  footer .container{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center;}
+  footer a{color:#cfe0ff;}
+
+  .disclaimer{background:var(--blue-light);border:1px solid #bcd4ff;border-radius:12px;padding:16px 18px;font-size:13px;color:#1e3a8a;margin-bottom:24px;display:flex;gap:12px;}
+  .disclaimer b{color:var(--blue-dark);}
+
+  @media(max-width:760px){
+    .topbar nav{display:none;}
+    .hero{padding:40px 0 110px;}
+    .toolbar-inner{gap:9px;}
+    .search{order:-1;flex-basis:100%;}
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <a href="index.html" class="brand"><span class="dot"></span>ConstroERP <small>· API Sienge</small></a>
+  <nav>
+    <a href="index.html" class="home">← Site</a>
+    <a href="app-suprimentos.html">App Suprimentos</a>
+    <a href="#mods">Módulos</a>
+  </nav>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <span class="badge">📊 CATÁLOGO DE INTEGRAÇÃO · API REST SIENGE</span>
+    <h1>Tudo o que a API do Sienge <span class="hl">entrega de informação</span>, em tabelas que você edita.</h1>
+    <p>Um catálogo vivo dos endpoints da API REST do Sienge, organizado por módulo. Cada linha é o dado que você consegue trazer para o canteiro — e tudo aqui é <b>editável direto no navegador</b>.</p>
+    <div class="eng">
+      <div class="av">👷</div>
+      <span><b>Visão do engenheiro civil:</b> mapeei cada recurso pensando em quem toca obra — orçamento, medição, compras, contas e cronograma físico-financeiro. Ligue o modo edição e ajuste à realidade da sua construtora.</span>
+    </div>
+  </div>
+</section>
+
+<!-- TOOLBAR -->
+<div class="container">
+  <div class="toolbar">
+    <div class="toolbar-inner">
+      <div class="search">
+        <span class="ic">🔍</span>
+        <input id="search" type="text" placeholder="Buscar por endpoint, dado, método ou módulo…">
+      </div>
+      <label class="toggle"><input type="checkbox" id="editToggle"><span class="sw"></span>Modo edição</label>
+      <button class="btn btn-ghost" id="expandAll">⊕ Expandir</button>
+      <button class="btn btn-ghost" id="exportJson">⬇ JSON</button>
+      <button class="btn btn-ghost" id="exportCsv">⬇ CSV</button>
+      <button class="btn btn-ghost" id="printBtn">🖨 PDF</button>
+      <button class="btn btn-ghost" id="resetBtn" title="Restaurar dados originais">↺ Resetar</button>
+      <span class="saved-tag" id="savedTag">✓ Salvo</span>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div class="strip">
+  <div class="strip-inner" id="strip"></div>
+</div>
+
+<!-- BODY -->
+<main>
+  <div class="container">
+    <div class="editbar">
+      <span class="badge-live">EDIÇÃO ON</span>
+      Clique em qualquer célula para editar. Adicione/remova linhas e módulos. As alterações ficam salvas <b>neste navegador</b> automaticamente.
+    </div>
+
+    <div class="disclaimer">
+      <span style="font-size:20px">ℹ️</span>
+      <div><b>Sobre estes dados:</b> os caminhos seguem a API pública REST do Sienge (<code>https://api.sienge.com.br/{subdomínio}/public/api/v1</code>), módulos de Suprimentos, Obras/Engenharia, Financeiro, Comercial e Cadastros. Use como referência de integração e ajuste conforme a versão contratada. Itens marcados como <i>aproximado</i> devem ser confirmados na documentação oficial.</div>
+    </div>
+
+    <div id="mods"></div>
+
+    <button class="add-module" id="addModule">+ Adicionar novo módulo</button>
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div>© 2026 <b style="color:#fff">ConstroERP</b> · Catálogo de integração com a API Sienge — ferramenta de referência editável.</div>
+    <div><a href="index.html">Voltar ao site</a> · <a href="app-suprimentos.html">App de Suprimentos</a></div>
+  </div>
+</footer>
+
+<script>
+/* ============================================================
+   CATÁLOGO DA API SIENGE — dados editáveis por módulo
+   Cada módulo: { id, icon, name, desc, color, rows:[{cat,method,path,desc}] }
+   ============================================================ */
+const DEFAULT_DATA = [
+  {
+    id:"suprimentos", icon:"📦", name:"Suprimentos — Solicitações & Pedidos", color:"#ff6b00",
+    desc:"Requisição de compra do canteiro até a aprovação do pedido. O fluxo material da obra.",
+    rows:[
+      {cat:"Solicitação",method:"POST",path:"/purchase-requests",desc:"Cria uma solicitação de compra para uma obra existente."},
+      {cat:"Solicitação",method:"GET",path:"/purchase-requests/{id}",desc:"Consulta a solicitação e seus insumos."},
+      {cat:"Solicitação",method:"PATCH",path:"/purchase-requests/{id}/authorize",desc:"Autoriza todos os itens aguardando autorização."},
+      {cat:"Solicitação",method:"PATCH",path:"/purchase-requests/{id}/disapproval",desc:"Reprova todos os itens aguardando autorização."},
+      {cat:"Itens",method:"GET",path:"/purchase-requests/all/items",desc:"Consulta todos os itens das solicitações (visão suprimentos)."},
+      {cat:"Itens",method:"POST",path:"/purchase-requests/{id}/items",desc:"Adiciona insumos (qtd. e unidade) a uma solicitação."},
+      {cat:"Itens",method:"GET",path:"/purchase-requests/{id}/items/{n}/buildings-appropriations",desc:"Apropriações de obra (centro de custo) de um item."},
+      {cat:"Itens",method:"GET",path:"/purchase-requests/{id}/items/{n}/delivery-requirements",desc:"Necessidades de entrega de um item."},
+      {cat:"Itens",method:"PATCH",path:"/purchase-requests/{id}/items/{n}/authorize",desc:"Autoriza um item individual."},
+      {cat:"Itens",method:"PATCH",path:"/purchase-requests/{id}/items/{n}/disapproval",desc:"Reprova um item individual."},
+      {cat:"Anexos",method:"GET",path:"/purchase-requests/{id}/attachments",desc:"Lista os anexos da solicitação."},
+      {cat:"Anexos",method:"GET",path:"/purchase-requests/{id}/attachments/{n}",desc:"Baixa um anexo em PDF."},
+      {cat:"Pedido",method:"GET",path:"/purchase-orders",desc:"Lista pedidos de compra (dashboard, filtros por status)."},
+      {cat:"Pedido",method:"GET",path:"/purchase-orders/{id}",desc:"Consulta um pedido e a cotação que o originou."},
+      {cat:"Itens",method:"GET",path:"/purchase-orders/{id}/items",desc:"Lista os itens do pedido e suas cotações."},
+      {cat:"Itens",method:"GET",path:"/purchase-orders/{id}/items/{n}",desc:"Detalhe de um item específico do pedido."},
+      {cat:"Itens",method:"GET",path:"/purchase-orders/{id}/items/{n}/delivery-schedules",desc:"Previsão de entrega do item."},
+      {cat:"Itens",method:"GET",path:"/purchase-orders/{id}/items/{n}/buildings-appropriations",desc:"Apropriações de obra do item."},
+      {cat:"Totalização",method:"GET",path:"/purchase-orders/{id}/totalization",desc:"Total de insumos, descontos, frete e condições."},
+      {cat:"Faturamento",method:"GET",path:"/purchase-orders/{id}/direct-billing",desc:"Dados de faturamento direto do pedido."},
+      {cat:"Aprovação",method:"PUT",path:"/purchase-orders/{id}/authorize",desc:"Autoriza pedido pendente."},
+      {cat:"Aprovação",method:"PATCH",path:"/purchase-orders/{id}/authorize",desc:"Autoriza pedido com observação."},
+      {cat:"Reprovação",method:"PUT",path:"/purchase-orders/{id}/disapprove",desc:"Reprova pedido pendente."},
+      {cat:"Reprovação",method:"PATCH",path:"/purchase-orders/{id}/disapprove",desc:"Reprova pedido com observação."},
+      {cat:"Anexos",method:"POST",path:"/purchase-orders/{id}/attachments",desc:"Insere anexo no pedido."},
+      {cat:"Anexos",method:"GET",path:"/purchase-orders/{id}/attachments",desc:"Lista anexos do pedido."},
+      {cat:"Anexos",method:"GET",path:"/purchase-orders/{id}/attachments/{n}",desc:"Baixa anexo em PDF."},
+      {cat:"Avaliação",method:"GET",path:"/purchase-orders/{id}/supplier-evaluation-criteria",desc:"Critérios de avaliação do fornecedor."},
+      {cat:"Avaliação",method:"POST",path:"/purchase-orders/{id}/evaluation",desc:"Registra avaliação do fornecedor."},
+      {cat:"Avaliação",method:"PUT",path:"/purchase-orders/{id}/evaluation",desc:"Atualiza avaliação do fornecedor."},
+      {cat:"Relatório",method:"GET",path:"/purchase-orders/{id}/analysis/pdf",desc:"Gera relatório de análise do pedido em PDF."},
+    ]
+  },
+  {
+    id:"cotacao", icon:"🧾", name:"Suprimentos — Cotações, Contratos & Medição", color:"#d97706",
+    desc:"Cotação de preços, contratos de fornecimento (empreita/serviço) e medição de contrato.",
+    rows:[
+      {cat:"Cotação",method:"GET",path:"/bulk-data/v1/purchase-quotations",desc:"Consulta em massa: cotações, itens, fornecedores e negociações. (pacote Ultimate)"},
+      {cat:"Cotação",method:"GET",path:"/purchase-quotations/comparison-map/pdf",desc:"Gera o Mapa de Cotações (comparativo de fornecedores) em PDF."},
+      {cat:"Negociação",method:"PATCH",path:"/purchase-quotations/.../negotiations/authorize",desc:"Autoriza negociações de cotação de preços. (aproximado)"},
+      {cat:"Contrato",method:"GET",path:"/supply-contracts/all",desc:"Todos os contratos de fornecimento, sem filtro."},
+      {cat:"Contrato",method:"GET",path:"/supply-contracts",desc:"Contratos com filtros (status, empresa, fornecedor, empreendimento)."},
+      {cat:"Contrato",method:"GET",path:"/supply-contracts/items",desc:"Itens vinculados aos contratos de fornecimento."},
+      {cat:"Contrato",method:"GET",path:"/supply-contracts/buildings",desc:"Obras/empreendimentos relacionados aos contratos."},
+      {cat:"Medição",method:"GET",path:"/supply-contracts/measurements/all",desc:"Todas as medições de contrato registradas."},
+      {cat:"Medição",method:"GET",path:"/supply-contracts/measurements/items",desc:"Itens da medição associados ao contrato."},
+      {cat:"Medição",method:"GET",path:"/supply-contracts/measurements/clearing",desc:"Glosas/compensações da medição (descontos e retenções)."},
+      {cat:"Medição",method:"POST",path:"/supply-contracts/measurements",desc:"Cria nova medição para um contrato de fornecimento."},
+      {cat:"Medição",method:"GET",path:"/supply-contracts/measurements/attachments",desc:"Anexos da medição. (aproximado)"},
+    ]
+  },
+  {
+    id:"obras", icon:"🏗️", name:"Obras & Engenharia — Orçamento e Avanço Físico", color:"#0052cc",
+    desc:"Cadastro de obras, orçamento de engenharia, insumos, estoque e medição do avanço físico (curva S).",
+    rows:[
+      {cat:"Obra",method:"GET",path:"/building-projects",desc:"Lista obras/projetos de construção cadastrados. (aproximado)"},
+      {cat:"Obra",method:"GET",path:"/building-projects/{buildingId}",desc:"Dados de uma obra específica. (aproximado)"},
+      {cat:"Orçamento",method:"GET",path:"/building-cost-estimations/{buildingId}/sheets",desc:"Planilhas de orçamento (sheets) da obra."},
+      {cat:"Orçamento",method:"GET",path:"/building-cost-estimations/{buildingId}/sheets/{sheetId}/items",desc:"Itens da planilha: composições, quantidades e custos. (aproximado)"},
+      {cat:"Orçamento",method:"GET",path:"/building-cost-estimations/{buildingId}/resources",desc:"Insumos do orçamento (material, mão de obra, equipamento)."},
+      {cat:"Medição",method:"GET",path:"/building-projects-progress-logs",desc:"Logs de avanço físico (medições) das obras. (aproximado)"},
+      {cat:"Medição",method:"GET",path:"/building-projects-progress-logs/{id}",desc:"Detalhe do avanço físico (% medido por item/tarefa). (aproximado)"},
+      {cat:"Medição",method:"POST",path:"/building-projects-progress-logs",desc:"Registra avanço físico / medição. (aproximado)"},
+      {cat:"Cronograma",method:"GET",path:"/building-tasks",desc:"Tarefas do planejamento da obra (cronograma físico). (aproximado)"},
+      {cat:"Cronograma",method:"GET",path:"/building-tasks/{id}",desc:"Detalhe de uma tarefa do plano de obra. (aproximado)"},
+      {cat:"Custos",method:"GET",path:"/unit-cost-tables",desc:"Tabelas de custos unitários (base de orçamento). (aproximado)"},
+      {cat:"Custos",method:"GET",path:"/unit-cost-compositions",desc:"Composições de custos unitários (insumos, coeficientes). (aproximado)"},
+      {cat:"Custos",method:"GET",path:"/unit-cost-inputs",desc:"Insumos de custos unitários. (aproximado)"},
+      {cat:"Estoque",method:"GET",path:"/stock-inventories/{costCenterId}/items",desc:"Insumos com saldo atual no centro de estoque, com apropriação de obra."},
+      {cat:"Estoque",method:"GET",path:"/stock-movements",desc:"Movimento de estoque: entradas e saídas de insumos. (aproximado)"},
+    ]
+  },
+  {
+    id:"financeiro", icon:"💰", name:"Financeiro — Contas a Pagar & Receber", color:"#16a34a",
+    desc:"Títulos a pagar e a receber, NF-e, saldos contábeis e fluxo de caixa. O caixa da obra.",
+    rows:[
+      {cat:"A Pagar",method:"GET",path:"/bills",desc:"Lista títulos do contas a pagar (filtros por credor/obra/período)."},
+      {cat:"A Pagar",method:"GET",path:"/bills/{billId}",desc:"Retorna um título do contas a pagar e suas parcelas."},
+      {cat:"A Pagar",method:"POST",path:"/bills",desc:"Inclui título no contas a pagar."},
+      {cat:"A Pagar",method:"POST",path:"/electronic-invoice-bills",desc:"Inclui título no contas a pagar a partir de NF-e recebida."},
+      {cat:"A Pagar",method:"GET",path:"/bills/{billId}/taxes",desc:"Consulta impostos do título / emissão de guias. (aproximado)"},
+      {cat:"A Pagar",method:"PATCH",path:"/bills/{billId}/units",desc:"Altera a apropriação de unidades no título. (aproximado)"},
+      {cat:"A Pagar",method:"GET",path:"/bulk-data/v1/bills",desc:"Consulta em massa das parcelas do contas a pagar. (Ultimate)"},
+      {cat:"A Receber",method:"GET",path:"/accounts-receivable/receivable-bills",desc:"Lista títulos do contas a receber. (aproximado)"},
+      {cat:"A Receber",method:"GET",path:"/accounts-receivable/receivable-bills/{id}",desc:"Retorna um título do contas a receber. (aproximado)"},
+      {cat:"A Receber",method:"POST",path:"/accounts-receivable/receivable-bills",desc:"Inclui título no contas a receber. (aproximado)"},
+      {cat:"Saldos",method:"GET",path:"/accounts-balances",desc:"Saldos contábeis de contas. (aproximado)"},
+      {cat:"Saldos",method:"GET",path:"/current-debit-balance",desc:"Saldo devedor atual. (aproximado)"},
+      {cat:"Caixa",method:"GET",path:"/bulk-data/v1/cash-flow-movements",desc:"Movimentos de caixa e bancos em massa. (Ultimate, aproximado)"},
+      {cat:"Caixa",method:"GET",path:"/bulk-data/v1/account-company-balance",desc:"Saldos contábeis consolidados por empresa (massa)."},
+    ]
+  },
+  {
+    id:"comercial", icon:"🏢", name:"Comercial & Incorporação — Vendas e Unidades", color:"#7c3aed",
+    desc:"Empreendimentos, unidades, clientes e contratos de venda. O lado da incorporação.",
+    rows:[
+      {cat:"Empreend.",method:"GET",path:"/enterprises",desc:"Lista empreendimentos/obras cadastrados."},
+      {cat:"Empreend.",method:"GET",path:"/enterprises/{id}",desc:"Dados do empreendimento (área, fase, registro)."},
+      {cat:"Unidade",method:"GET",path:"/units",desc:"Lista unidades (apartamentos/lotes) e situação comercial."},
+      {cat:"Unidade",method:"GET",path:"/units/{id}",desc:"Detalhe da unidade: área, tipologia, valor."},
+      {cat:"Unidade",method:"PUT",path:"/units/{unitId}/characteristics",desc:"Atualiza características da unidade."},
+      {cat:"Unidade",method:"GET",path:"/units/{unitId}/situations",desc:"Situações comerciais da unidade."},
+      {cat:"Cliente",method:"GET",path:"/customers",desc:"Lista clientes (compradores)."},
+      {cat:"Cliente",method:"GET",path:"/customers/{id}",desc:"Dados cadastrais do cliente."},
+      {cat:"Cliente",method:"POST",path:"/customers",desc:"Cadastra um novo cliente. (aproximado)"},
+      {cat:"Cliente",method:"PUT",path:"/customers/{id}/spouse",desc:"Atualiza dados do cônjuge do cliente."},
+      {cat:"Contrato",method:"GET",path:"/sales-contracts",desc:"Lista contratos de venda. (aproximado)"},
+      {cat:"Contrato",method:"GET",path:"/sales-contracts/{id}",desc:"Detalhe de um contrato de venda. (aproximado)"},
+      {cat:"Contrato",method:"GET",path:"/sales-contracts/{id}/attachments",desc:"Lista anexos do contrato."},
+      {cat:"Contrato",method:"POST",path:"/sales-contracts/{id}/attachments",desc:"Envia arquivo/anexo ao contrato."},
+      {cat:"Contrato",method:"GET",path:"/sales-contracts/{id}/attachments/{fileId}",desc:"Baixa um anexo do contrato."},
+    ]
+  },
+  {
+    id:"cadastros", icon:"🗂️", name:"Cadastros & Master Data", color:"#0a1628",
+    desc:"Bases de apoio: credores/fornecedores, insumos, indexadores, empresas e webhooks.",
+    rows:[
+      {cat:"Credor",method:"GET",path:"/creditors",desc:"Lista credores (fornecedores)."},
+      {cat:"Credor",method:"GET",path:"/creditors/{creditorId}",desc:"Dados de um credor (CNPJ, contato)."},
+      {cat:"Credor",method:"POST",path:"/creditors",desc:"Cadastra um novo credor/fornecedor. (aproximado)"},
+      {cat:"Credor",method:"GET",path:"/creditors/{creditorId}/bank-informations",desc:"Consulta os dados bancários do credor."},
+      {cat:"Credor",method:"POST",path:"/creditors/{creditorId}/bank-informations",desc:"Inclui dados bancários (banco, agência, conta, beneficiário)."},
+      {cat:"Credor",method:"PATCH",path:"/creditors/{creditorId}/bank-informations/{id}",desc:"Altera os dados bancários do credor."},
+      {cat:"Centro Custo",method:"GET",path:"/cost-centers",desc:"Centros de custo (obras/setores) para apropriação. (aproximado)"},
+      {cat:"Plano Fin.",method:"GET",path:"/payment-categories",desc:"Planos financeiros / categorias de pagamento. (aproximado)"},
+      {cat:"Empresa",method:"GET",path:"/companies",desc:"Empresas/filiais do grupo. (aproximado)"},
+      {cat:"Depto",method:"GET",path:"/departments",desc:"Departamentos/setores. (aproximado)"},
+      {cat:"Profissão",method:"GET",path:"/professions",desc:"Profissões/cargos cadastrados. (aproximado)"},
+      {cat:"Indexador",method:"GET",path:"/indexers",desc:"Indexadores econômicos (INCC, IGP-M). (aproximado)"},
+      {cat:"Webhook",method:"GET",path:"/hooks",desc:"Webhooks configurados para eventos do Sienge."},
+      {cat:"Webhook",method:"POST",path:"/hooks",desc:"Registra um webhook para receber eventos (ex.: COST_CENTER_UPDATED)."},
+    ]
+  }
+];
+
+const LS_KEY = "constroerp_sienge_catalog_v1";
+const METHODS = ["GET","POST","PUT","PATCH","DELETE"];
+let data;
+
+function load(){
+  try{ const s = localStorage.getItem(LS_KEY); if(s) return JSON.parse(s); }catch(e){}
+  return structuredClone(DEFAULT_DATA);
+}
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(data)); flashSaved(); }catch(e){}
+}
+let savedTimer;
+function flashSaved(){
+  const t = document.getElementById("savedTag");
+  t.classList.add("show"); clearTimeout(savedTimer);
+  savedTimer = setTimeout(()=>t.classList.remove("show"), 1400);
+}
+
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function methodCell(m){
+  m = (m||"GET").toUpperCase();
+  return `<span class="method m-${m}" contenteditable data-field="method">${esc(m)}</span>`;
+}
+
+function rowHtml(mIdx, rIdx, r){
+  return `<tr data-m="${mIdx}" data-r="${rIdx}">
+    <td class="col-cat"><span class="cat-tag" contenteditable data-field="cat">${esc(r.cat)}</span></td>
+    <td class="col-method">${methodCell(r.method)}</td>
+    <td class="col-path" contenteditable data-field="path">${esc(r.path)}</td>
+    <td contenteditable data-field="desc">${esc(r.desc)}</td>
+    <td class="col-act"><button class="del-row" title="Remover linha" data-del="${mIdx}:${rIdx}">✕</button></td>
+  </tr>`;
+}
+
+function moduleHtml(m, idx){
+  const rows = m.rows.map((r,ri)=>rowHtml(idx,ri,r)).join("");
+  return `<div class="module" data-m="${idx}" id="mod-${m.id}">
+    <div class="module-head" style="border-left-color:${m.color}" data-toggle="${idx}">
+      <div class="mi" style="background:${hexA(m.color,.12)}">${m.icon}</div>
+      <div class="mt">
+        <h3><span contenteditable data-field="icon" data-m="${idx}" class="ed-icon" title="Ícone">${esc(m.icon)}</span><span contenteditable data-field="name" data-m="${idx}">${esc(m.name)}</span></h3>
+        <p contenteditable data-field="desc" data-m="${idx}">${esc(m.desc)}</p>
+      </div>
+      <span class="count">${m.rows.length} endpoints</span>
+      <span class="chev">▼</span>
+    </div>
+    <div class="module-body">
+      <div class="tbl-wrap">
+        <table class="cat">
+          <thead><tr>
+            <th class="col-cat">Categoria</th>
+            <th class="col-method">Método</th>
+            <th class="col-path">Endpoint</th>
+            <th>O que entrega / faz</th>
+            <th class="col-act"></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="module-tools">
+        <button class="mini" data-addrow="${idx}">+ Adicionar linha</button>
+        <button class="mini danger" data-delmod="${idx}">🗑 Remover módulo</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function hexA(hex,a){
+  const h=hex.replace('#',''); const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+
+function render(){
+  const mods = document.getElementById("mods");
+  mods.innerHTML = data.map((m,i)=>moduleHtml(m,i)).join("");
+  renderStrip();
+  attach();
+}
+
+function renderStrip(){
+  const totalEp = data.reduce((s,m)=>s+m.rows.length,0);
+  const methods = {};
+  data.forEach(m=>m.rows.forEach(r=>{const k=(r.method||"").toUpperCase();methods[k]=(methods[k]||0)+1;}));
+  const strip = document.getElementById("strip");
+  strip.innerHTML = `
+    <div class="stat"><label>Módulos</label><strong>${data.length}</strong></div>
+    <div class="stat"><label>Endpoints</label><strong>${totalEp}</strong></div>
+    <div class="stat"><label>Consultas (GET)</label><strong>${methods.GET||0}</strong></div>
+    <div class="stat"><label>Escrita (POST/PUT/PATCH)</label><strong>${(methods.POST||0)+(methods.PUT||0)+(methods.PATCH||0)}</strong></div>`;
+}
+
+/* ---------- editing ---------- */
+function attach(){
+  // toggle collapse
+  document.querySelectorAll("[data-toggle]").forEach(h=>{
+    h.addEventListener("click",e=>{
+      if(e.target.closest("[contenteditable]")) return; // don't collapse while editing title
+      h.closest(".module").classList.toggle("collapsed");
+    });
+  });
+  // cell edits (rows)
+  document.querySelectorAll("table.cat td[contenteditable], table.cat .method[contenteditable], table.cat .cat-tag[contenteditable]").forEach(el=>{
+    el.addEventListener("blur",()=>commitCell(el));
+  });
+  // method recolor live
+  document.querySelectorAll(".method[contenteditable]").forEach(el=>{
+    el.addEventListener("input",()=>{
+      const v=el.textContent.trim().toUpperCase();
+      el.className="method m-"+(METHODS.includes(v)?v:"GET");
+    });
+  });
+  // module head edits
+  document.querySelectorAll(".module-head [contenteditable]").forEach(el=>{
+    el.addEventListener("blur",()=>{
+      const mi=+el.getAttribute("data-m"); const f=el.getAttribute("data-field");
+      data[mi][f]=el.textContent.trim(); save(); if(f==="icon"||f==="color") render();
+    });
+  });
+  // delete row
+  document.querySelectorAll("[data-del]").forEach(b=>{
+    b.addEventListener("click",()=>{
+      const [mi,ri]=b.getAttribute("data-del").split(":").map(Number);
+      data[mi].rows.splice(ri,1); save(); render();
+    });
+  });
+  // add row
+  document.querySelectorAll("[data-addrow]").forEach(b=>{
+    b.addEventListener("click",()=>{
+      const mi=+b.getAttribute("data-addrow");
+      data[mi].rows.push({cat:"Novo",method:"GET",path:"/novo-endpoint",desc:"Descreva o dado entregue."});
+      save(); render();
+      const mod=document.querySelector(`.module[data-m="${mi}"]`); mod.classList.remove("collapsed");
+      mod.querySelector("tbody tr:last-child td.col-cat .cat-tag").focus();
+    });
+  });
+  // delete module
+  document.querySelectorAll("[data-delmod]").forEach(b=>{
+    b.addEventListener("click",()=>{
+      const mi=+b.getAttribute("data-delmod");
+      if(confirm(`Remover o módulo "${data[mi].name}" e seus ${data[mi].rows.length} endpoints?`)){
+        data.splice(mi,1); save(); render();
+      }
+    });
+  });
+}
+
+function commitCell(el){
+  const tr=el.closest("tr"); if(!tr)return;
+  const mi=+tr.getAttribute("data-m"), ri=+tr.getAttribute("data-r");
+  const f=el.getAttribute("data-field");
+  let v=el.textContent.trim();
+  if(f==="method"){v=v.toUpperCase(); if(!METHODS.includes(v))v="GET"; el.className="method m-"+v;}
+  data[mi].rows[ri][f]=v; save();
+}
+
+/* ---------- search ---------- */
+document.getElementById("search").addEventListener("input",e=>{
+  const q=e.target.value.toLowerCase().trim();
+  document.querySelectorAll(".module").forEach(mod=>{
+    let any=false;
+    mod.querySelectorAll("tbody tr").forEach(tr=>{
+      const hit=!q || tr.textContent.toLowerCase().includes(q);
+      tr.style.display=hit?"":"none"; if(hit)any=true;
+    });
+    const headHit = mod.querySelector(".mt").textContent.toLowerCase().includes(q);
+    mod.style.display=(any||headHit||!q)?"":"none";
+    if(q){mod.classList.remove("collapsed");}
+  });
+});
+
+/* ---------- toolbar buttons ---------- */
+document.getElementById("editToggle").addEventListener("change",e=>{
+  document.body.classList.toggle("editing",e.target.checked);
+});
+let allExpanded=true;
+document.getElementById("expandAll").addEventListener("click",e=>{
+  allExpanded=!allExpanded;
+  document.querySelectorAll(".module").forEach(m=>m.classList.toggle("collapsed",!allExpanded));
+  e.target.textContent=allExpanded?"⊖ Recolher":"⊕ Expandir";
+});
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  if(confirm("Restaurar o catálogo original? Suas edições neste navegador serão perdidas.")){
+    data=structuredClone(DEFAULT_DATA); save(); render();
+  }
+});
+document.getElementById("printBtn").addEventListener("click",()=>window.print());
+document.getElementById("addModule").addEventListener("click",()=>{
+  data.push({id:"mod"+Date.now(),icon:"🆕",name:"Novo módulo",color:"#0052cc",desc:"Descreva este módulo.",
+    rows:[{cat:"Categoria",method:"GET",path:"/endpoint",desc:"O que entrega."}]});
+  save(); render();
+  const last=document.querySelector(".module:last-of-type"); last.scrollIntoView({behavior:"smooth",block:"center"});
+});
+
+/* ---------- export ---------- */
+function download(name,content,type){
+  const b=new Blob([content],{type}); const u=URL.createObjectURL(b);
+  const a=document.createElement("a"); a.href=u; a.download=name; a.click(); URL.revokeObjectURL(u);
+}
+document.getElementById("exportJson").addEventListener("click",()=>{
+  download("catalogo-api-sienge.json",JSON.stringify(data,null,2),"application/json");
+});
+document.getElementById("exportCsv").addEventListener("click",()=>{
+  const q=s=>`"${(s||"").replace(/"/g,'""')}"`;
+  let csv="Módulo,Categoria,Método,Endpoint,Descrição\n";
+  data.forEach(m=>m.rows.forEach(r=>{csv+=[q(m.name),q(r.cat),q(r.method),q(r.path),q(r.desc)].join(",")+"\n";}));
+  download("catalogo-api-sienge.csv","﻿"+csv,"text/csv");
+});
+
+/* ---------- init ---------- */
+data=load();
+render();
+</script>
+</body>
+</html>
