@@ -504,16 +504,32 @@ tr:hover td{background:var(--gray-50);}
 
       <!-- ══ MEDIÇÕES ══ -->
       <div class="page" id="page-medicoes">
-        <div class="ph"><div><h1>Medições</h1><p>Medições de contrato com aprovação eletrônica</p></div><button class="btn btn-p" onclick="toast('Nova medição criada','📏')">+ Nova Medição</button></div>
+        <div class="ph">
+          <div><h1>Medições</h1><p>Medições de contrato com aprovação eletrônica</p></div>
+          <button class="btn btn-p" onclick="abrirModalMedicao()">+ Nova Medição</button>
+        </div>
+        <div class="grid4" style="margin-bottom:18px">
+          <div class="kpi"><div class="k-label">Total de Medições</div><div class="k-val" id="kpi-med-total">3</div></div>
+          <div class="kpi"><div class="k-label">Ag. Aprovação</div><div class="k-val" style="color:var(--orange)" id="kpi-med-pend">1</div></div>
+          <div class="kpi"><div class="k-label">Aprovadas</div><div class="k-val" style="color:var(--green)" id="kpi-med-aprov">1</div></div>
+          <div class="kpi"><div class="k-label">Valor Total</div><div class="k-val" style="font-size:16px" id="kpi-med-val">R$ 644k</div></div>
+        </div>
         <div class="tcard">
-          <div class="ttoolbar"><h3>Medições por Contrato</h3><input class="tsearch" placeholder="🔍 Buscar..."></div>
+          <div class="ttoolbar">
+            <h3>Medições por Contrato</h3>
+            <div style="display:flex;gap:8px">
+              <input class="tsearch" placeholder="🔍 Buscar..." oninput="filtrarMedicoes(this.value)">
+            </div>
+          </div>
+          <div class="filter-row" id="filter-med">
+            <button class="fb on" onclick="filtroMed('',this)">Todas</button>
+            <button class="fb" onclick="filtroMed('Ag. Aprovação',this)">Ag. Aprovação</button>
+            <button class="fb" onclick="filtroMed('Aprovada',this)">Aprovadas</button>
+            <button class="fb" onclick="filtroMed('Em análise',this)">Em análise</button>
+          </div>
           <table>
-            <thead><tr><th>Medição</th><th>Contrato</th><th>Obra</th><th>Período</th><th>Valor</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              <tr><td><strong>MED-0142</strong></td><td>Cont. Estrutura 001</td><td>Palmeiras</td><td>Maio/26</td><td>R$ 248.000</td><td><span class="tag tg">Aprovada</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
-              <tr><td><strong>MED-0143</strong></td><td>Cont. Alvenaria 002</td><td>Palmeiras</td><td>Maio/26</td><td>R$ 84.000</td><td><span class="tag to">Ag. Aprovação</span></td><td><button class="btn btn-o btn-sm" onclick="toast('Medição aprovada!','✅')">Aprovar</button></td></tr>
-              <tr><td><strong>MED-0144</strong></td><td>Cont. Estrutura 003</td><td>Torres Azul</td><td>Maio/26</td><td>R$ 312.000</td><td><span class="tag tb2">Em análise</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
-            </tbody>
+            <thead><tr><th>Medição</th><th>Contrato</th><th>Obra</th><th>Período</th><th>Serviço</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody id="tbody-medicoes"></tbody>
           </table>
         </div>
       </div>
@@ -979,6 +995,76 @@ tr:hover td{background:var(--gray-50);}
   </div>
 </div>
 
+<!-- ══ MODAL MEDIÇÕES ══ -->
+<div class="modal-overlay" id="modalMedicao" onclick="if(event.target===this)fecharModalMedicao()">
+  <div class="modal" style="width:640px">
+    <div class="modal-head">
+      <h3 id="tituloModalMed">Nova Medição</h3>
+      <button class="modal-close" onclick="fecharModalMedicao()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="med-id">
+      <div class="grid2">
+        <div class="fg">
+          <label>Número do Contrato *</label>
+          <select class="fi" id="med-contrato">
+            <option value="">Selecionar...</option>
+            <option>Cont. Estrutura 001</option>
+            <option>Cont. Alvenaria 002</option>
+            <option>Cont. Estrutura 003</option>
+            <option>Cont. Instalações 004</option>
+            <option>Cont. Acabamento 005</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Obra *</label>
+          <select class="fi" id="med-obra">
+            <option value="">Selecionar...</option>
+            <option>Residencial Palmeiras</option>
+            <option>Torres Azul</option>
+            <option>Parque das Flores</option>
+            <option>Loteamento Bela Vista</option>
+            <option>Villas do Sol</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Período de Referência *</label>
+          <input class="fi" type="month" id="med-periodo" value="2026-06">
+        </div>
+        <div class="fg">
+          <label>Valor da Medição (R$) *</label>
+          <input class="fi" type="number" id="med-valor" placeholder="0,00" min="0" step="0.01">
+        </div>
+        <div class="fg" style="grid-column:1/-1">
+          <label>Serviço / Descrição *</label>
+          <input class="fi" id="med-servico" placeholder="Ex: Estrutura — Concretagem Pav. 2">
+        </div>
+        <div class="fg">
+          <label>Responsável</label>
+          <input class="fi" id="med-responsavel" placeholder="Nome do engenheiro">
+        </div>
+        <div class="fg">
+          <label>Status</label>
+          <select class="fi" id="med-status">
+            <option>Em análise</option>
+            <option>Ag. Aprovação</option>
+            <option>Aprovada</option>
+            <option>Reprovada</option>
+          </select>
+        </div>
+        <div class="fg" style="grid-column:1/-1">
+          <label>Observações</label>
+          <textarea class="fi" id="med-obs" style="height:72px;resize:vertical" placeholder="Informações adicionais, ressalvas..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-o" onclick="fecharModalMedicao()">Cancelar</button>
+      <button class="btn btn-p" onclick="salvarMedicao()">💾 Salvar Medição</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ TOAST ══ -->
 <div class="toast" id="toastEl"><span id="toastIcon"></span><span id="toastMsg"></span></div>
 
@@ -1032,6 +1118,163 @@ function addSCRow(){
 document.querySelectorAll('.fb').forEach(b=>{
   b.addEventListener('click',function(){this.closest('.filter-row').querySelectorAll('.fb').forEach(x=>x.classList.remove('on'));this.classList.add('on');});
 });
+
+// ══ MEDIÇÕES ══
+let medicoes = [
+  {id:1, numero:'MED-0142', contrato:'Cont. Estrutura 001', obra:'Residencial Palmeiras', periodo:'2026-05', servico:'Estrutura — Concretagem Pav. 1', valor:248000, responsavel:'Eng. Rafael', status:'Aprovada', obs:''},
+  {id:2, numero:'MED-0143', contrato:'Cont. Alvenaria 002', obra:'Residencial Palmeiras', periodo:'2026-05', servico:'Alvenaria — Blocos Pav. 1', valor:84000, responsavel:'Eng. Rafael', status:'Ag. Aprovação', obs:'Aguardando vistoria'},
+  {id:3, numero:'MED-0144', contrato:'Cont. Estrutura 003', obra:'Torres Azul', periodo:'2026-05', servico:'Estrutura — Concretagem Pav. 2', valor:312000, responsavel:'Eng. Patrícia', status:'Em análise', obs:''},
+];
+let medFiltroStatus = '';
+
+function renderMedicoes(lista) {
+  lista = lista || medicoes;
+  if (medFiltroStatus) lista = lista.filter(m => m.status === medFiltroStatus);
+  const tbody = document.getElementById('tbody-medicoes');
+  if (!tbody) return;
+  if (lista.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--gray-400)">Nenhuma medição encontrada</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(m => {
+    const tagClass = {
+      'Aprovada':'tg','Ag. Aprovação':'to','Em análise':'tb2','Reprovada':'tr'
+    }[m.status] || 'tgr';
+    const periodo = m.periodo ? m.periodo.split('-').reverse().join('/') : '—';
+    const valor = 'R$ ' + Number(m.valor).toLocaleString('pt-BR');
+    return `<tr>
+      <td><strong>${m.numero}</strong></td>
+      <td>${m.contrato}</td>
+      <td>${m.obra}</td>
+      <td>${periodo}</td>
+      <td style="max-width:180px">${m.servico}</td>
+      <td><strong>${valor}</strong></td>
+      <td><span class="tag ${tagClass}">${m.status}</span></td>
+      <td><div class="ra">
+        ${m.status==='Ag. Aprovação' ? `<button class="btn btn-s btn-sm" onclick="aprovarMedicao(${m.id})">✓ Aprovar</button>` : ''}
+        <button class="btn btn-o btn-sm" onclick="editarMedicao(${m.id})">✏️</button>
+        <button class="btn btn-sm" style="color:var(--red);border:1.5px solid var(--gray-200);border-radius:7px" onclick="excluirMedicao(${m.id})">🗑️</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  atualizarKpisMedicao();
+}
+
+function atualizarKpisMedicao() {
+  const t = document.getElementById('kpi-med-total');
+  const p = document.getElementById('kpi-med-pend');
+  const a = document.getElementById('kpi-med-aprov');
+  const v = document.getElementById('kpi-med-val');
+  if (!t) return;
+  t.textContent = medicoes.length;
+  p.textContent = medicoes.filter(m=>m.status==='Ag. Aprovação').length;
+  a.textContent = medicoes.filter(m=>m.status==='Aprovada').length;
+  const total = medicoes.reduce((s,m)=>s+Number(m.valor),0);
+  v.textContent = 'R$ ' + (total/1000).toFixed(0) + 'k';
+}
+
+function filtroMed(status, btn) {
+  medFiltroStatus = status;
+  document.querySelectorAll('#filter-med .fb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderMedicoes();
+}
+
+function filtrarMedicoes(q) {
+  q = q.toLowerCase();
+  const lista = medicoes.filter(m =>
+    m.numero.toLowerCase().includes(q) ||
+    m.contrato.toLowerCase().includes(q) ||
+    m.obra.toLowerCase().includes(q) ||
+    m.servico.toLowerCase().includes(q)
+  );
+  renderMedicoes(lista);
+}
+
+function abrirModalMedicao(med) {
+  document.getElementById('tituloModalMed').textContent = med ? 'Editar Medição' : 'Nova Medição';
+  document.getElementById('med-id').value = med ? med.id : '';
+  document.getElementById('med-contrato').value = med ? med.contrato : '';
+  document.getElementById('med-obra').value = med ? med.obra : '';
+  document.getElementById('med-periodo').value = med ? med.periodo : new Date().toISOString().slice(0,7);
+  document.getElementById('med-valor').value = med ? med.valor : '';
+  document.getElementById('med-servico').value = med ? med.servico : '';
+  document.getElementById('med-responsavel').value = med ? med.responsavel : '';
+  document.getElementById('med-status').value = med ? med.status : 'Em análise';
+  document.getElementById('med-obs').value = med ? med.obs : '';
+  document.getElementById('modalMedicao').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharModalMedicao() {
+  document.getElementById('modalMedicao').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function salvarMedicao() {
+  const contrato = document.getElementById('med-contrato').value;
+  const obra = document.getElementById('med-obra').value;
+  const valor = document.getElementById('med-valor').value;
+  const servico = document.getElementById('med-servico').value;
+  if (!contrato || !obra || !valor || !servico) {
+    toast('Preencha todos os campos obrigatórios','⚠️'); return;
+  }
+  const id = document.getElementById('med-id').value;
+  const dados = {
+    contrato, obra,
+    periodo: document.getElementById('med-periodo').value,
+    valor: parseFloat(valor),
+    servico,
+    responsavel: document.getElementById('med-responsavel').value,
+    status: document.getElementById('med-status').value,
+    obs: document.getElementById('med-obs').value,
+  };
+  if (id) {
+    const idx = medicoes.findIndex(m => m.id == id);
+    medicoes[idx] = { ...medicoes[idx], ...dados };
+    toast('Medição atualizada com sucesso!', '✅');
+  } else {
+    const novoId = medicoes.length ? Math.max(...medicoes.map(m=>m.id)) + 1 : 1;
+    const novoNum = 'MED-0' + String(144 + novoId).padStart(3,'0');
+    medicoes.push({ id: novoId, numero: novoNum, ...dados });
+    toast('Medição MED-0' + String(144 + novoId).padStart(3,'0') + ' criada!', '📏');
+  }
+  fecharModalMedicao();
+  renderMedicoes();
+}
+
+function editarMedicao(id) {
+  const med = medicoes.find(m => m.id === id);
+  if (med) abrirModalMedicao(med);
+}
+
+function excluirMedicao(id) {
+  const med = medicoes.find(m => m.id === id);
+  if (!med) return;
+  if (confirm(`Excluir a medição ${med.numero}?\nEsta ação não pode ser desfeita.`)) {
+    medicoes = medicoes.filter(m => m.id !== id);
+    renderMedicoes();
+    toast('Medição excluída', '🗑️');
+  }
+}
+
+function aprovarMedicao(id) {
+  const med = medicoes.find(m => m.id === id);
+  if (med) {
+    med.status = 'Aprovada';
+    renderMedicoes();
+    toast('Medição ' + med.numero + ' aprovada!', '✅');
+  }
+}
+
+// Inicializar medições quando a página carregar
+document.addEventListener('DOMContentLoaded', () => { renderMedicoes(); });
+// Também renderizar quando navegar para medições
+const _go = go;
+go = function(id) {
+  _go(id);
+  if (id === 'medicoes') renderMedicoes();
+};
 </script>
 </body>
 </html>
