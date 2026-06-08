@@ -3,796 +3,1054 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Homem Voador</title>
+  <title>ConstroERP – O ecossistema da Indústria da Construção Civil</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0a0a1a;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      font-family: 'Arial', sans-serif;
-      overflow: hidden;
+    :root {
+      --blue: #0052cc;
+      --blue-dark: #003a99;
+      --blue-light: #e8f0fe;
+      --orange: #ff6b00;
+      --orange-light: #fff3e8;
+      --gray-100: #f8f9fa;
+      --gray-200: #e9ecef;
+      --gray-400: #ced4da;
+      --gray-600: #6c757d;
+      --gray-800: #343a40;
+      --white: #ffffff;
+      --text: #1a1a2e;
+      --shadow: 0 4px 20px rgba(0,0,0,.08);
+      --radius: 12px;
+      --transition: .25s ease;
     }
-    #gameCanvas {
-      border: 2px solid #4af;
-      border-radius: 8px;
-      box-shadow: 0 0 30px #4af8, 0 0 60px #4af3;
-      cursor: pointer;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: var(--text); background: #fff; line-height: 1.6; }
+    a { text-decoration: none; color: inherit; }
+    img { max-width: 100%; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; border: 2px solid transparent; transition: var(--transition); }
+    .btn-primary { background: var(--orange); color: #fff; border-color: var(--orange); }
+    .btn-primary:hover { background: #e05a00; border-color: #e05a00; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,107,0,.35); }
+    .btn-secondary { background: transparent; color: var(--blue); border-color: var(--blue); }
+    .btn-secondary:hover { background: var(--blue); color: #fff; }
+    .btn-white { background: #fff; color: var(--blue); }
+    .btn-white:hover { background: var(--orange); color: #fff; }
+    .badge { display: inline-block; padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+    .badge-blue { background: var(--blue-light); color: var(--blue); }
+    .badge-orange { background: var(--orange-light); color: var(--orange); }
+    .section { padding: 96px 0; }
+    .section-gray { background: var(--gray-100); }
+    .section-blue { background: var(--blue); color: #fff; }
+    .section-dark { background: #0a1628; color: #fff; }
+    .section-title { font-size: clamp(28px,4vw,42px); font-weight: 800; line-height: 1.2; margin-bottom: 16px; }
+    .section-sub { font-size: 18px; color: var(--gray-600); max-width: 640px; line-height: 1.7; }
+    .section-header { text-align: center; margin-bottom: 64px; }
+    .section-header .section-sub { margin: 0 auto; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 48px; align-items: center; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+    @media(max-width:900px){ .grid-2,.grid-3,.grid-4{ grid-template-columns:1fr; } }
+    @media(max-width:640px){ .grid-3{ grid-template-columns:1fr 1fr; } }
+
+    /* ── NAV ── */
+    nav { position: sticky; top: 0; z-index: 1000; background: #fff; border-bottom: 1px solid var(--gray-200); }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; color: var(--blue); }
+    .logo span { color: var(--orange); }
+    .logo-icon { width: 38px; height: 38px; background: var(--blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon svg { width: 22px; height: 22px; fill: #fff; }
+    .nav-links { display: flex; align-items: center; gap: 8px; }
+    .nav-links a { padding: 8px 14px; border-radius: 6px; font-size: 14px; font-weight: 500; color: var(--gray-800); transition: var(--transition); }
+    .nav-links a:hover { background: var(--gray-100); color: var(--blue); }
+    .nav-ctas { display: flex; align-items: center; gap: 12px; }
+    .nav-ctas .btn { padding: 10px 20px; font-size: 14px; }
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 8px; }
+    .hamburger span { width: 24px; height: 2px; background: var(--gray-800); border-radius: 2px; transition: var(--transition); }
+    @media(max-width:900px){
+      .nav-links,.nav-ctas .btn-secondary { display: none; }
+      .hamburger { display: flex; }
     }
-    #ui {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      display: flex;
-      justify-content: space-between;
-      padding: 14px 24px;
-      pointer-events: none;
-    }
-    .stat {
-      color: #fff;
-      font-size: 18px;
-      font-weight: bold;
-      text-shadow: 0 0 8px #4af;
-    }
-    #message {
-      position: absolute;
-      color: #fff;
-      font-size: 26px;
-      font-weight: bold;
-      text-align: center;
-      text-shadow: 0 0 12px #4af;
-      pointer-events: none;
-      display: none;
-    }
+
+    /* ── HERO ── */
+    .hero { background: linear-gradient(135deg, #0a1628 0%, #0052cc 60%, #1a3a80 100%); color: #fff; padding: 120px 0 96px; position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+    .hero-content { position: relative; z-index: 1; }
+    .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+    .hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 600; margin-bottom: 24px; }
+    .hero-eyebrow span { width: 8px; height: 8px; background: #4ade80; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .hero h1 { font-size: clamp(32px,5vw,56px); font-weight: 900; line-height: 1.1; margin-bottom: 24px; }
+    .hero h1 em { font-style: normal; color: var(--orange); }
+    .hero p { font-size: 18px; color: rgba(255,255,255,.8); margin-bottom: 40px; line-height: 1.7; }
+    .hero-btns { display: flex; gap: 16px; flex-wrap: wrap; }
+    .hero-stats { display: flex; gap: 32px; margin-top: 56px; flex-wrap: wrap; }
+    .hero-stat strong { display: block; font-size: 32px; font-weight: 900; color: #fff; }
+    .hero-stat span { font-size: 13px; color: rgba(255,255,255,.6); }
+    .hero-visual { position: relative; }
+    .dashboard-mock { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 32px 80px rgba(0,0,0,.4); }
+    .dash-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .dash-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dash-title { font-size: 13px; font-weight: 600; color: var(--text); margin-left: 8px; }
+    .dash-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .dash-card { background: var(--gray-100); border-radius: 8px; padding: 12px; }
+    .dash-card-label { font-size: 10px; color: var(--gray-600); margin-bottom: 4px; }
+    .dash-card-value { font-size: 18px; font-weight: 800; color: var(--text); }
+    .dash-card-delta { font-size: 10px; color: #16a34a; }
+    .dash-chart { background: var(--gray-100); border-radius: 8px; padding: 14px; height: 100px; display: flex; align-items: flex-end; gap: 6px; }
+    .bar { flex: 1; border-radius: 4px 4px 0 0; background: var(--blue); opacity: .7; }
+    .bar:nth-child(3n) { background: var(--orange); opacity: .8; }
+    .dash-table { margin-top: 12px; }
+    .dash-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--gray-200); font-size: 11px; }
+    .dash-row:last-child { border: none; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .status-green { background: #16a34a; }
+    .status-orange { background: var(--orange); }
+    .status-blue { background: var(--blue); }
+    @media(max-width:900px){ .hero-grid{ grid-template-columns:1fr; } .hero-visual{ display:none; } }
+
+    /* ── LOGOS BAR ── */
+    .logos-bar { padding: 48px 0; border-bottom: 1px solid var(--gray-200); }
+    .logos-bar p { text-align: center; font-size: 13px; font-weight: 600; color: var(--gray-600); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 32px; }
+    .logos-scroll { display: flex; gap: 40px; align-items: center; justify-content: center; flex-wrap: wrap; }
+    .logo-item { background: var(--gray-100); border-radius: 8px; padding: 12px 24px; font-size: 14px; font-weight: 700; color: var(--gray-600); }
+
+    /* ── MODULE CARDS ── */
+    .module-card { background: #fff; border-radius: var(--radius); padding: 32px; border: 1px solid var(--gray-200); transition: var(--transition); cursor: pointer; }
+    .module-card:hover { border-color: var(--blue); box-shadow: var(--shadow); transform: translateY(-4px); }
+    .module-icon { width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; font-size: 24px; }
+    .module-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+    .module-card p { font-size: 14px; color: var(--gray-600); line-height: 1.6; }
+    .module-card ul { margin-top: 16px; list-style: none; display: flex; flex-direction: column; gap: 7px; }
+    .module-card ul li { font-size: 13px; color: var(--gray-600); display: flex; align-items: center; gap: 8px; }
+    .module-card ul li::before { content: '✓'; color: var(--blue); font-weight: 700; font-size: 12px; }
+
+    /* ── FEATURE ROWS ── */
+    .feature-row { padding: 80px 0; }
+    .feature-row:nth-child(even) { background: var(--gray-100); }
+    .feature-row .grid-2 .text-side { }
+    .feature-row .text-side h2 { font-size: clamp(24px,3vw,36px); font-weight: 800; margin-bottom: 16px; line-height: 1.2; }
+    .feature-row .text-side p { font-size: 16px; color: var(--gray-600); margin-bottom: 24px; line-height: 1.7; }
+    .feature-list { list-style: none; display: flex; flex-direction: column; gap: 14px; margin-bottom: 32px; }
+    .feature-list li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; }
+    .feature-list li .check { width: 22px; height: 22px; background: var(--blue-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; color: var(--blue); font-weight: 700; margin-top: 1px; }
+    .feature-visual { background: #fff; border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; border: 1px solid var(--gray-200); }
+    .feature-visual-header { background: var(--blue); padding: 14px 20px; display: flex; align-items: center; gap: 8px; }
+    .feature-visual-header span { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.9); }
+    .feature-visual-body { padding: 20px; }
+    .fv-metric-row { display: flex; gap: 12px; margin-bottom: 14px; }
+    .fv-metric { flex: 1; background: var(--gray-100); border-radius: 8px; padding: 14px; }
+    .fv-metric label { display: block; font-size: 10px; color: var(--gray-600); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+    .fv-metric strong { font-size: 20px; font-weight: 800; color: var(--text); }
+    .fv-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .fv-table th { background: var(--gray-100); padding: 8px 12px; text-align: left; font-weight: 600; color: var(--gray-600); }
+    .fv-table td { padding: 8px 12px; border-bottom: 1px solid var(--gray-200); }
+    .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .tag-green { background: #dcfce7; color: #16a34a; }
+    .tag-orange { background: var(--orange-light); color: var(--orange); }
+    .tag-blue { background: var(--blue-light); color: var(--blue); }
+    .tag-red { background: #fee2e2; color: #dc2626; }
+    .progress-bar { background: var(--gray-200); border-radius: 4px; height: 8px; margin-top: 4px; }
+    .progress-fill { height: 100%; border-radius: 4px; background: var(--blue); }
+
+    /* ── STATS ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
+    .stat-item { text-align: center; }
+    .stat-item strong { display: block; font-size: clamp(36px,5vw,56px); font-weight: 900; color: var(--orange); }
+    .stat-item span { font-size: 15px; color: rgba(255,255,255,.75); }
+    @media(max-width:700px){ .stats-grid{ grid-template-columns: 1fr 1fr; } }
+
+    /* ── INTEGRATIONS ── */
+    .integration-card { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: var(--radius); padding: 28px; transition: var(--transition); }
+    .integration-card:hover { background: rgba(255,255,255,.14); transform: translateY(-3px); }
+    .integration-card h4 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .integration-card p { font-size: 13px; color: rgba(255,255,255,.65); }
+
+    /* ── TESTIMONIALS ── */
+    .testimonial-card { background: #fff; border-radius: var(--radius); padding: 36px; box-shadow: var(--shadow); border: 1px solid var(--gray-200); }
+    .testimonial-card blockquote { font-size: 16px; line-height: 1.7; color: var(--gray-800); margin-bottom: 28px; font-style: italic; }
+    .testimonial-author { display: flex; align-items: center; gap: 14px; }
+    .author-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--orange)); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #fff; flex-shrink: 0; }
+    .author-name { font-weight: 700; font-size: 15px; }
+    .author-role { font-size: 13px; color: var(--gray-600); }
+    .stars { color: #f59e0b; font-size: 14px; margin-bottom: 16px; }
+
+    /* ── PRICING ── */
+    .pricing-card { background: #fff; border-radius: var(--radius); border: 2px solid var(--gray-200); padding: 40px 32px; position: relative; transition: var(--transition); }
+    .pricing-card:hover { border-color: var(--blue); box-shadow: var(--shadow); }
+    .pricing-card.featured { border-color: var(--blue); box-shadow: 0 12px 40px rgba(0,82,204,.18); }
+    .pricing-badge { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--orange); color: #fff; padding: 5px 18px; border-radius: 20px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .pricing-name { font-size: 14px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+    .pricing-price { font-size: 42px; font-weight: 900; color: var(--text); margin-bottom: 4px; }
+    .pricing-price sup { font-size: 20px; font-weight: 700; vertical-align: top; margin-top: 10px; display: inline-block; }
+    .pricing-period { font-size: 13px; color: var(--gray-600); margin-bottom: 24px; }
+    .pricing-desc { font-size: 14px; color: var(--gray-600); margin-bottom: 28px; line-height: 1.6; }
+    .pricing-features { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+    .pricing-features li { font-size: 14px; display: flex; align-items: center; gap: 10px; }
+    .pricing-features li::before { content: '✓'; color: #16a34a; font-weight: 700; }
+    .pricing-features li.no::before { content: '✕'; color: var(--gray-400); }
+    .pricing-features li.no { color: var(--gray-400); }
+
+    /* ── FAQ ── */
+    .faq-item { border-bottom: 1px solid var(--gray-200); }
+    .faq-question { width: 100%; text-align: left; padding: 22px 0; font-size: 16px; font-weight: 600; background: none; border: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--text); }
+    .faq-question::after { content: '+'; font-size: 22px; color: var(--blue); font-weight: 400; transition: var(--transition); }
+    .faq-question.open::after { content: '−'; }
+    .faq-answer { max-height: 0; overflow: hidden; transition: max-height .4s ease, padding .3s ease; }
+    .faq-answer.open { max-height: 300px; padding-bottom: 20px; }
+    .faq-answer p { font-size: 15px; color: var(--gray-600); line-height: 1.7; }
+
+    /* ── CTA BANNER ── */
+    .cta-banner { background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%); color: #fff; text-align: center; padding: 96px 24px; }
+    .cta-banner h2 { font-size: clamp(28px,4vw,48px); font-weight: 900; margin-bottom: 16px; }
+    .cta-banner p { font-size: 18px; color: rgba(255,255,255,.8); margin-bottom: 40px; }
+    .cta-banner .btn-group { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+    /* ── FOOTER ── */
+    footer { background: #0a1628; color: rgba(255,255,255,.65); padding: 80px 0 40px; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 64px; }
+    .footer-brand p { font-size: 14px; line-height: 1.7; margin: 16px 0 24px; }
+    .footer-social { display: flex; gap: 12px; }
+    .social-btn { width: 36px; height: 36px; background: rgba(255,255,255,.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; cursor: pointer; transition: var(--transition); }
+    .social-btn:hover { background: var(--orange); }
+    footer h4 { color: #fff; font-size: 14px; font-weight: 700; margin-bottom: 20px; text-transform: uppercase; letter-spacing: .06em; }
+    footer ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    footer ul li a { font-size: 14px; transition: var(--transition); }
+    footer ul li a:hover { color: #fff; }
+    .footer-bottom { border-top: 1px solid rgba(255,255,255,.1); padding-top: 32px; display: flex; justify-content: space-between; align-items: center; flex-wrap: gap-16px; font-size: 13px; }
+    @media(max-width:900px){ .footer-grid{ grid-template-columns:1fr 1fr; } }
+    @media(max-width:500px){ .footer-grid{ grid-template-columns:1fr; } }
+
+    /* ── MOBILE NAV MENU ── */
+    .mobile-menu { display: none; position: fixed; inset: 72px 0 0 0; background: #fff; z-index: 999; padding: 24px; flex-direction: column; gap: 8px; overflow-y: auto; }
+    .mobile-menu.active { display: flex; }
+    .mobile-menu a { padding: 14px 16px; border-radius: 8px; font-size: 16px; font-weight: 500; color: var(--text); transition: var(--transition); }
+    .mobile-menu a:hover { background: var(--gray-100); }
+    .mobile-menu .btn { width: 100%; justify-content: center; margin-top: 8px; }
+
+    /* ── SCROLL ANIMATIONS ── */
+    .fade-up { opacity: 0; transform: translateY(32px); transition: opacity .6s ease, transform .6s ease; }
+    .fade-up.visible { opacity: 1; transform: none; }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
-  <div id="ui">
-    <span class="stat" id="scoreDisplay">Pontos: 0</span>
-    <span class="stat" id="levelDisplay">Nível: 1</span>
-    <span class="stat" id="highDisplay">Recorde: 0</span>
+
+<!-- ══════════════════ NAV ══════════════════ -->
+<nav>
+  <div class="container">
+    <div class="nav-inner">
+      <a href="#" class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        Constro<span>ERP</span>
+      </a>
+      <div class="nav-links">
+        <a href="#modulos">Módulos</a>
+        <a href="#engenharia">Engenharia</a>
+        <a href="#financeiro">Financeiro</a>
+        <a href="#suprimentos">Suprimentos</a>
+        <a href="#incorporacao">Incorporação</a>
+        <a href="#planos">Planos</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div class="nav-ctas">
+        <a href="#planos" class="btn btn-secondary">Ver planos</a>
+        <a href="#demo" class="btn btn-primary">Solicitar demo</a>
+      </div>
+      <div class="hamburger" id="hamburger">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
   </div>
-  <div id="message"></div>
+</nav>
 
-  <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const scoreEl = document.getElementById('scoreDisplay');
-    const levelEl = document.getElementById('levelDisplay');
-    const highEl = document.getElementById('highDisplay');
-    const msgEl = document.getElementById('message');
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#modulos">Módulos</a>
+  <a href="#engenharia">Engenharia</a>
+  <a href="#financeiro">Financeiro</a>
+  <a href="#suprimentos">Suprimentos</a>
+  <a href="#incorporacao">Incorporação</a>
+  <a href="#planos">Planos</a>
+  <a href="#faq">FAQ</a>
+  <a href="#demo" class="btn btn-primary">Solicitar demo gratuita</a>
+</div>
 
-    // Responsive canvas
-    const W = Math.min(window.innerWidth - 4, 800);
-    const H = Math.min(window.innerHeight - 4, 520);
-    canvas.width = W;
-    canvas.height = H;
+<!-- ══════════════════ HERO ══════════════════ -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid hero-content">
+      <div>
+        <div class="hero-eyebrow"><span></span> ERP para Construção Civil</div>
+        <h1>O ecossistema da <em>Construção Civil</em> em um só lugar</h1>
+        <p>Gerencie obras, finanças, suprimentos e incorporação com a plataforma mais completa do mercado. Mais de 5.000 construtoras já transformaram seus resultados.</p>
+        <div class="hero-btns">
+          <a href="#demo" class="btn btn-primary">Solicitar demonstração</a>
+          <a href="#modulos" class="btn" style="background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3);">Conhecer módulos</a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat"><strong>5.000+</strong><span>Construtoras atendidas</span></div>
+          <div class="hero-stat"><strong>77/100</strong><span>Maiores do Brasil</span></div>
+          <div class="hero-stat"><strong>30+</strong><span>Anos no mercado</span></div>
+          <div class="hero-stat"><strong>99,9%</strong><span>Uptime garantido</span></div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="dashboard-mock">
+          <div class="dash-header">
+            <div class="dash-dot" style="background:#ff5f57"></div>
+            <div class="dash-dot" style="background:#febc2e"></div>
+            <div class="dash-dot" style="background:#28c840"></div>
+            <span class="dash-title">Dashboard — Visão Geral</span>
+          </div>
+          <div class="dash-cards">
+            <div class="dash-card">
+              <div class="dash-card-label">Obras Ativas</div>
+              <div class="dash-card-value">24</div>
+              <div class="dash-card-delta">↑ 3 este mês</div>
+            </div>
+            <div class="dash-card">
+              <div class="dash-card-label">Receita Prevista</div>
+              <div class="dash-card-value" style="font-size:14px">R$ 12,4M</div>
+              <div class="dash-card-delta">↑ 18% a.a.</div>
+            </div>
+            <div class="dash-card">
+              <div class="dash-card-label">Ordens de Compra</div>
+              <div class="dash-card-value">187</div>
+              <div class="dash-card-delta">↑ 12 pendentes</div>
+            </div>
+          </div>
+          <div class="dash-chart">
+            <div class="bar" style="height:55%"></div>
+            <div class="bar" style="height:70%"></div>
+            <div class="bar" style="height:60%"></div>
+            <div class="bar" style="height:85%"></div>
+            <div class="bar" style="height:75%"></div>
+            <div class="bar" style="height:90%"></div>
+            <div class="bar" style="height:80%"></div>
+          </div>
+          <div class="dash-table">
+            <div class="dash-row"><span><span class="status-dot status-green"></span>Residencial Palmeiras</span><span>82%</span></div>
+            <div class="dash-row"><span><span class="status-dot status-orange"></span>Com. Central Park</span><span>47%</span></div>
+            <div class="dash-row"><span><span class="status-dot status-blue"></span>Loteamento Bela Vista</span><span>23%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    // Game state
-    const STATE = { MENU: 0, PLAYING: 1, DEAD: 2 };
-    let state = STATE.MENU;
-    let score = 0, highScore = 0, level = 1, frame = 0;
-    let particles = [], stars = [], clouds = [];
+<!-- ══════════════════ LOGOS BAR ══════════════════ -->
+<section class="logos-bar">
+  <div class="container">
+    <p>Empresas que confiam na ConstroERP</p>
+    <div class="logos-scroll">
+      <div class="logo-item">CONSTRUTORA ALFA</div>
+      <div class="logo-item">GRUPO HORIZONTE</div>
+      <div class="logo-item">MRV ENGENHARIA</div>
+      <div class="logo-item">TENDA NEGÓCIOS</div>
+      <div class="logo-item">DIRECIONAL ENG.</div>
+      <div class="logo-item">CYRELA BRAZIL</div>
+    </div>
+  </div>
+</section>
 
-    // Player
-    const player = {
-      x: W * 0.18,
-      y: H / 2,
-      vy: 0,
-      vx: 0,
-      width: 36,
-      height: 44,
-      gravity: 0.38,
-      flapPower: -7.5,
-      maxVy: 9,
-      alive: true,
-      wingAngle: 0,
-      wingDir: 1,
-      cape: [],
-      trail: [],
-      flapping: false,
-      flapTimer: 0,
-      stars: 0,
-      powerup: 0,      // frames of shield
-    };
+<!-- ══════════════════ MODULES ══════════════════ -->
+<section class="section" id="modulos">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="badge badge-blue">Plataforma Completa</div>
+      <h2 class="section-title">Tudo o que sua construtora precisa</h2>
+      <p class="section-sub">12 módulos integrados que conectam incorporação, obra e back‑office em um único sistema, garantindo dados confiáveis e decisões mais rápidas.</p>
+    </div>
+    <div class="grid-3" style="gap:24px">
+      <div class="module-card fade-up">
+        <div class="module-icon" style="background:#dbeafe">🏗️</div>
+        <h3>Engenharia</h3>
+        <p>Orçamentos, cronogramas, diários de obra e controle de custos integrados.</p>
+        <ul>
+          <li>Orçamento analítico e paramétrico</li>
+          <li>Cronograma físico-financeiro</li>
+          <li>Diário de obra digital</li>
+          <li>Controle de medições</li>
+          <li>Integração BIM/Revit</li>
+        </ul>
+      </div>
+      <div class="module-card fade-up">
+        <div class="module-icon" style="background:#fef3c7">💰</div>
+        <h3>Financeiro</h3>
+        <p>Fluxo de caixa, contas a pagar/receber e controle orçamentário completo.</p>
+        <ul>
+          <li>Fluxo de caixa projetado</li>
+          <li>Contas a pagar e a receber</li>
+          <li>Conciliação bancária</li>
+          <li>Gestão de antecipações</li>
+          <li>DRE e relatórios gerenciais</li>
+        </ul>
+      </div>
+      <div class="module-card fade-up">
+        <div class="module-icon" style="background:#f0fdf4">📦</div>
+        <h3>Suprimentos</h3>
+        <p>Compras, estoque, fornecedores e contratos em um único fluxo automatizado.</p>
+        <ul>
+          <li>Requisição e aprovação de compras</li>
+          <li>Controle de estoque por obra</li>
+          <li>Cotação e comparativo de preços</li>
+          <li>Gestão de contratos de fornecimento</li>
+          <li>Rastreabilidade de materiais</li>
+        </ul>
+      </div>
+      <div class="module-card fade-up">
+        <div class="module-icon" style="background:#fdf4ff">🏢</div>
+        <h3>Incorporação</h3>
+        <p>Viabilidade, vendas, contratos e portfólio de recebíveis integrados.</p>
+        <ul>
+          <li>Análise de viabilidade econômica</li>
+          <li>Contratos de compra e venda</li>
+          <li>Gestão de distrato e recompra</li>
+          <li>Carteira de recebíveis</li>
+          <li>Repasse bancário</li>
+        </ul>
+      </div>
+      <div class="module-card fade-up">
+        <div class="module-icon" style="background:#fff1f2">📊</div>
+        <h3>Contabilidade</h3>
+        <p>Escrituração contábil, fiscal e obrigações acessórias totalmente integradas.</p>
+        <ul>
+          <li>Lançamentos contábeis automáticos</li>
+          <li>Balancete e balanço patrimonial</li>
+          <li>SPED Contábil e Fiscal</li>
+          <li>Apuração de impostos</li>
+          <li>NF-e e NFS-e integradas</li>
+        </ul>
+      </div>
+      <div class="module-card fade-up">
+        <div class="module-icon" style="background:#f0f9ff">👥</div>
+        <h3>RH e Folha</h3>
+        <p>Gestão de pessoas, controle de ponto e folha de pagamento para obra.</p>
+        <ul>
+          <li>Controle de ponto eletrônico</li>
+          <li>Folha de pagamento</li>
+          <li>eSocial integrado</li>
+          <li>Gestão de equipes por obra</li>
+          <li>Admissão e demissão digital</li>
+        </ul>
+      </div>
+      <div class="module-card fade-up">
+        <div class="module-icon" style="background:#f7f7f0">🏅</div>
+        <h3>Qualidade</h3>
+        <p>Atende às normas ISO 9001, PBQP-H e gestão de não conformidades.</p>
+        <ul>
+          <li>Checklists de inspeção</li>
+          <li>Registro de não conformidades</li>
+          <li>Ações corretivas e preventivas</li>
+          <li>Controle de documentos</li>
+          <li>Relatórios para auditorias</li>
+        </ul>
+      </div>
+      <div class="module-card fade-up">
+        <div class="module-icon" style="background:#fff8f0">📋</div>
+        <h3>Fiscal</h3>
+        <p>Emissão de notas fiscais, apuração tributária e obrigações acessórias.</p>
+        <ul>
+          <li>Emissão de NF-e e NFS-e</li>
+          <li>Apuração ISS, PIS, COFINS</li>
+          <li>SPED EFD-Contribuições</li>
+          <li>Retenções na fonte</li>
+          <li>Declaração DCTF</li>
+        </ul>
+      </div>
+      <div class="module-card fade-up">
+        <div class="module-icon" style="background:#eff6ff">🔒</div>
+        <h3>Segurança e Acesso</h3>
+        <p>Controle granular de permissões, auditoria de ações e LGPD.</p>
+        <ul>
+          <li>Perfis e grupos de usuários</li>
+          <li>Log de auditoria completo</li>
+          <li>SSO e autenticação MFA</li>
+          <li>Conformidade com LGPD</li>
+          <li>Backup automático na nuvem</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
 
-    // Obstacles
-    let obstacles = [];
-    let obstacleTimer = 0;
-    let obstacleInterval = 120;
-    let obstacleSpeed = 3.2;
-    const GAP = 190;
+<!-- ══════════════════ ENGENHARIA ══════════════════ -->
+<section class="feature-row" id="engenharia">
+  <div class="container">
+    <div class="grid-2">
+      <div class="text-side fade-up">
+        <div class="badge badge-blue">Módulo Engenharia</div>
+        <h2>Controle total sobre cada obra do planejamento à entrega</h2>
+        <p>Do orçamento paramétrico ao diário de obra, tudo integrado para que engenheiros e gestores tomem decisões baseadas em dados reais, em tempo real.</p>
+        <ul class="feature-list">
+          <li><span class="check">✓</span> Orçamento analítico com composições SINAPI e TCPO integradas</li>
+          <li><span class="check">✓</span> Cronograma físico-financeiro com curva S automática</li>
+          <li><span class="check">✓</span> Diário de obra digital com fotos, ocorrências e equipes</li>
+          <li><span class="check">✓</span> Medições de contrato com aprovação eletrônica</li>
+          <li><span class="check">✓</span> Integração nativa com Revit e formatos IFC (BIM)</li>
+          <li><span class="check">✓</span> Controle de avanço físico por serviço e por pavimento</li>
+        </ul>
+        <a href="#demo" class="btn btn-primary">Ver demonstração</a>
+      </div>
+      <div class="feature-visual fade-up">
+        <div class="feature-visual-header">
+          <span>🏗️ Módulo Engenharia — Acompanhamento de Obras</span>
+        </div>
+        <div class="feature-visual-body">
+          <div class="fv-metric-row">
+            <div class="fv-metric"><label>Custo Orçado</label><strong>R$ 4,2M</strong></div>
+            <div class="fv-metric"><label>Custo Realizado</label><strong>R$ 3,1M</strong></div>
+            <div class="fv-metric"><label>Avanço Físico</label><strong>73%</strong></div>
+          </div>
+          <table class="fv-table">
+            <thead><tr><th>Serviço</th><th>Orçado</th><th>Realizado</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Fundações</td><td>R$ 420k</td><td>R$ 398k</td><td><span class="tag tag-green">Concluído</span></td></tr>
+              <tr><td>Estrutura</td><td>R$ 1,2M</td><td>R$ 980k</td><td><span class="tag tag-blue">Em andamento</span></td></tr>
+              <tr><td>Alvenaria</td><td>R$ 380k</td><td>R$ 190k</td><td><span class="tag tag-orange">Iniciando</span></td></tr>
+              <tr><td>Instalações</td><td>R$ 560k</td><td>R$ 0</td><td><span class="tag tag-blue">Planejado</span></td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:16px">
+            <div style="font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:8px">Avanço por Pavimento</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="font-size:11px;display:flex;justify-content:space-between"><span>Térreo</span><span>100%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+              <div style="font-size:11px;display:flex;justify-content:space-between"><span>1º Pavimento</span><span>88%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:88%"></div></div>
+              <div style="font-size:11px;display:flex;justify-content:space-between"><span>2º Pavimento</span><span>61%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:61%"></div></div>
+              <div style="font-size:11px;display:flex;justify-content:space-between"><span>3º Pavimento</span><span>22%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:22%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    // Coins
-    let coins = [];
+<!-- ══════════════════ SUPRIMENTOS ══════════════════ -->
+<section class="feature-row section-gray" id="suprimentos">
+  <div class="container">
+    <div class="grid-2">
+      <div class="feature-visual fade-up">
+        <a href="app-suprimentos.html" style="display:block;margin-bottom:12px;text-align:center">
+          <span class="btn btn-primary" style="font-size:13px">🚀 Abrir App de Suprimentos (demo interativa)</span>
+        </a>
+        <div class="feature-visual-header" style="background:#16a34a">
+          <span>📦 Módulo Suprimentos — Central de Compras</span>
+        </div>
+        <div class="feature-visual-body">
+          <div class="fv-metric-row">
+            <div class="fv-metric"><label>Itens em Estoque</label><strong>1.248</strong></div>
+            <div class="fv-metric"><label>OCs Abertas</label><strong>34</strong></div>
+            <div class="fv-metric"><label>Economia Gerada</label><strong>8,4%</strong></div>
+          </div>
+          <table class="fv-table">
+            <thead><tr><th>Material</th><th>Qtd</th><th>Preço Un</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Cimento CP II</td><td>2.400 sc</td><td>R$ 32,90</td><td><span class="tag tag-green">Aprovado</span></td></tr>
+              <tr><td>Vergalhão CA-50</td><td>18 t</td><td>R$ 8.400</td><td><span class="tag tag-orange">Cotação</span></td></tr>
+              <tr><td>Tijolo 9cm</td><td>50.000 un</td><td>R$ 0,68</td><td><span class="tag tag-green">Aprovado</span></td></tr>
+              <tr><td>Areia Fina</td><td>120 m³</td><td>R$ 118,00</td><td><span class="tag tag-red">Pendente</span></td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:14px;background:var(--gray-100);border-radius:8px;padding:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Comparativo de Fornecedores</div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;justify-content:space-between;font-size:11px"><span>Fornecedor A</span><span style="color:#16a34a;font-weight:700">R$ 8.200 ✓ Melhor preço</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px"><span>Fornecedor B</span><span>R$ 8.400</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:11px"><span>Fornecedor C</span><span>R$ 8.750</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="text-side fade-up">
+        <div class="badge badge-blue">Módulo Suprimentos</div>
+        <h2>Compras inteligentes, estoque sob controle</h2>
+        <p>Automatize o fluxo de requisição, cotação, aprovação e recebimento de materiais. Nunca mais pare uma obra por falta de material ou pague mais caro por compra emergencial.</p>
+        <ul class="feature-list">
+          <li><span class="check">✓</span> Requisição de compra com aprovação em múltiplos níveis</li>
+          <li><span class="check">✓</span> Cotação simultânea com múltiplos fornecedores</li>
+          <li><span class="check">✓</span> Controle de estoque mínimo com alertas automáticos</li>
+          <li><span class="check">✓</span> Rastreabilidade de materiais do pedido à obra</li>
+          <li><span class="check">✓</span> Gestão de contratos de fornecimento e medições</li>
+          <li><span class="check">✓</span> Integração automática com contas a pagar</li>
+        </ul>
+        <a href="#demo" class="btn btn-primary">Ver demonstração</a>
+      </div>
+    </div>
+  </div>
+</section>
 
-    // Powerups
-    let powerups = [];
+<!-- ══════════════════ FINANCEIRO ══════════════════ -->
+<section class="feature-row" id="financeiro">
+  <div class="container">
+    <div class="grid-2">
+      <div class="text-side fade-up">
+        <div class="badge badge-blue">Módulo Financeiro</div>
+        <h2>Visibilidade financeira total, do projeto ao caixa</h2>
+        <p>Conecte o orçamento da obra às finanças da empresa. Saiba exatamente onde cada centavo foi aplicado, projete o fluxo de caixa e evite surpresas.</p>
+        <ul class="feature-list">
+          <li><span class="check">✓</span> Fluxo de caixa realizado e projetado com drill-down por obra</li>
+          <li><span class="check">✓</span> Contas a pagar com aprovação hierárquica e agendamento</li>
+          <li><span class="check">✓</span> Contas a receber com régua de cobrança automática</li>
+          <li><span class="check">✓</span> Conciliação bancária automática via OFX e Open Finance</li>
+          <li><span class="check">✓</span> DRE por obra, empreendimento ou consolidado</li>
+          <li><span class="check">✓</span> Integração com bancos para pagamento em lote</li>
+        </ul>
+        <a href="#demo" class="btn btn-primary">Ver demonstração</a>
+      </div>
+      <div class="feature-visual fade-up">
+        <div class="feature-visual-header" style="background:#7c3aed">
+          <span>💰 Módulo Financeiro — Fluxo de Caixa</span>
+        </div>
+        <div class="feature-visual-body">
+          <div class="fv-metric-row">
+            <div class="fv-metric"><label>Saldo Atual</label><strong style="color:#16a34a">R$ 1,84M</strong></div>
+            <div class="fv-metric"><label>A Receber (30d)</label><strong>R$ 920k</strong></div>
+            <div class="fv-metric"><label>A Pagar (30d)</label><strong style="color:#dc2626">R$ 687k</strong></div>
+          </div>
+          <div style="background:var(--gray-100);border-radius:8px;padding:14px;margin-bottom:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:10px;text-transform:uppercase">Projeção 6 meses</div>
+            <div style="display:flex;align-items:flex-end;gap:6px;height:60px">
+              <div style="flex:1;border-radius:3px 3px 0 0;background:#16a34a;opacity:.7;height:75%"></div>
+              <div style="flex:1;border-radius:3px 3px 0 0;background:#16a34a;opacity:.7;height:88%"></div>
+              <div style="flex:1;border-radius:3px 3px 0 0;background:#16a34a;opacity:.7;height:65%"></div>
+              <div style="flex:1;border-radius:3px 3px 0 0;background:#16a34a;opacity:.7;height:95%"></div>
+              <div style="flex:1;border-radius:3px 3px 0 0;background:var(--orange);opacity:.7;height:72%"></div>
+              <div style="flex:1;border-radius:3px 3px 0 0;background:var(--orange);opacity:.7;height:60%"></div>
+            </div>
+          </div>
+          <table class="fv-table">
+            <thead><tr><th>Conta a Pagar</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Fornecedora ABC</td><td>12/06</td><td>R$ 48.200</td><td><span class="tag tag-orange">Pendente</span></td></tr>
+              <tr><td>Mão de Obra Ltda</td><td>15/06</td><td>R$ 132.000</td><td><span class="tag tag-blue">Agendado</span></td></tr>
+              <tr><td>Concessionária</td><td>20/06</td><td>R$ 8.750</td><td><span class="tag tag-green">Pago</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-    // ───── Stars (background) ─────
-    for (let i = 0; i < 80; i++) {
-      stars.push({
-        x: Math.random() * W,
-        y: Math.random() * H,
-        r: Math.random() * 1.5 + 0.3,
-        speed: Math.random() * 0.4 + 0.1,
-        twinkle: Math.random() * Math.PI * 2,
+<!-- ══════════════════ INCORPORAÇÃO ══════════════════ -->
+<section class="feature-row section-gray" id="incorporacao">
+  <div class="container">
+    <div class="grid-2">
+      <div class="feature-visual fade-up">
+        <div class="feature-visual-header" style="background:#ea580c">
+          <span>🏢 Módulo Incorporação — Portfólio de Empreendimentos</span>
+        </div>
+        <div class="feature-visual-body">
+          <div class="fv-metric-row">
+            <div class="fv-metric"><label>Unidades Totais</label><strong>486</strong></div>
+            <div class="fv-metric"><label>Vendidas</label><strong style="color:#16a34a">312 (64%)</strong></div>
+            <div class="fv-metric"><label>VGV Total</label><strong>R$ 148M</strong></div>
+          </div>
+          <table class="fv-table">
+            <thead><tr><th>Empreendimento</th><th>Un. Vendidas</th><th>Inadimp.</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Residencial Palmeiras</td><td>120/120</td><td>2,1%</td><td><span class="tag tag-green">Entregue</span></td></tr>
+              <tr><td>Torres Azul</td><td>98/120</td><td>3,4%</td><td><span class="tag tag-blue">Em obras</span></td></tr>
+              <tr><td>Parque das Flores</td><td>64/120</td><td>1,8%</td><td><span class="tag tag-blue">Lançamento</span></td></tr>
+              <tr><td>Villas do Sol</td><td>30/126</td><td>0%</td><td><span class="tag tag-orange">Pré-lançamento</span></td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:14px;display:flex;gap:10px">
+            <div style="flex:1;background:var(--orange-light);border-radius:8px;padding:10px;text-align:center"><div style="font-size:10px;color:var(--orange);font-weight:700;margin-bottom:4px">RECEITA PREVISTA</div><div style="font-size:16px;font-weight:800">R$ 12,4M</div></div>
+            <div style="flex:1;background:#dcfce7;border-radius:8px;padding:10px;text-align:center"><div style="font-size:10px;color:#16a34a;font-weight:700;margin-bottom:4px">RECEITA REALIZADA</div><div style="font-size:16px;font-weight:800">R$ 10,8M</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="text-side fade-up">
+        <div class="badge badge-blue">Módulo Incorporação</div>
+        <h2>Do lançamento à entrega com total previsibilidade</h2>
+        <p>Gerencie o ciclo completo de cada empreendimento: viabilidade econômica, contratos, vendas, recebíveis, repasse e entrega de chaves em uma plataforma só.</p>
+        <ul class="feature-list">
+          <li><span class="check">✓</span> Análise de viabilidade com TIR, VPL e payback</li>
+          <li><span class="check">✓</span> Gestão de contratos com atualização de índices automática</li>
+          <li><span class="check">✓</span> Régua de cobrança e inadimplência automatizadas</li>
+          <li><span class="check">✓</span> Processo de distrato, rescisão e recompra</li>
+          <li><span class="check">✓</span> Repasse bancário e gestão de carteira securitizada</li>
+          <li><span class="check">✓</span> Portal do cliente com 2ª via de boleto e extrato</li>
+        </ul>
+        <a href="#demo" class="btn btn-primary">Ver demonstração</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ STATS ══════════════════ -->
+<section class="section section-dark">
+  <div class="container">
+    <div class="section-header fade-up" style="margin-bottom:64px">
+      <div class="badge" style="background:rgba(255,107,0,.2);color:var(--orange)">Números que impressionam</div>
+      <h2 class="section-title" style="color:#fff">Resultados reais de quem usa a ConstroERP</h2>
+    </div>
+    <div class="stats-grid fade-up">
+      <div class="stat-item"><strong>5.000+</strong><span>Construtoras ativas na plataforma</span></div>
+      <div class="stat-item"><strong>77%</strong><span>Das 100 maiores construtoras do Brasil</span></div>
+      <div class="stat-item"><strong>30%</strong><span>Redução média no custo de obras</span></div>
+      <div class="stat-item"><strong>2x</strong><span>Mais velocidade na gestão financeira</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ INTEGRATIONS ══════════════════ -->
+<section class="section section-blue">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="badge" style="background:rgba(255,255,255,.15);color:#fff">Integrações</div>
+      <h2 class="section-title" style="color:#fff">Conecte com as ferramentas que você já usa</h2>
+      <p class="section-sub" style="color:rgba(255,255,255,.75)">Mais de 25 integrações nativas com ERPs, bancos, marketplaces e softwares de engenharia.</p>
+    </div>
+    <div class="grid-3 fade-up">
+      <div class="integration-card">
+        <div style="font-size:28px;margin-bottom:12px">🏗️</div>
+        <h4>Autodesk Revit / BIM</h4>
+        <p>Importe modelos BIM diretamente para o orçamento. Quantitativos automáticos a partir do modelo 3D.</p>
+      </div>
+      <div class="integration-card">
+        <div style="font-size:28px;margin-bottom:12px">🏦</div>
+        <h4>Bancos e Open Finance</h4>
+        <p>Conciliação automática, pagamentos em lote e integração com Bradesco, Itaú, Caixa, BB e mais de 30 bancos.</p>
+      </div>
+      <div class="integration-card">
+        <div style="font-size:28px;margin-bottom:12px">📑</div>
+        <h4>SEFAZ e Receita Federal</h4>
+        <p>Emissão de NF-e, NFS-e, SPED Fiscal, SPED Contábil e EFD-Contribuições de forma automatizada.</p>
+      </div>
+      <div class="integration-card">
+        <div style="font-size:28px;margin-bottom:12px">📱</div>
+        <h4>App Mobile</h4>
+        <p>Aplicativo iOS e Android para engenheiros de campo: diário de obra, fotos georreferenciadas e relatórios offline.</p>
+      </div>
+      <div class="integration-card">
+        <div style="font-size:28px;margin-bottom:12px">📊</div>
+        <h4>Power BI e Tableau</h4>
+        <p>Conectores nativos para BI. Dashboards personalizados com todos os dados da plataforma em tempo real.</p>
+      </div>
+      <div class="integration-card">
+        <div style="font-size:28px;margin-bottom:12px">🔗</div>
+        <h4>API RESTful Aberta</h4>
+        <p>API documentada e webhooks para integração com qualquer sistema interno ou externo da sua empresa.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ TESTIMONIALS ══════════════════ -->
+<section class="section" id="depoimentos">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="badge badge-orange">Depoimentos</div>
+      <h2 class="section-title">O que nossos clientes dizem</h2>
+    </div>
+    <div class="grid-3 fade-up">
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <blockquote>"Com a ConstroERP conseguimos reduzir o tempo de fechamento financeiro de 15 dias para 3 dias. A integração entre obras e financeiro é impressionante."</blockquote>
+        <div class="testimonial-author">
+          <div class="author-avatar">RC</div>
+          <div><div class="author-name">Ricardo Costa</div><div class="author-role">Diretor Financeiro – Construtora Horizonte</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <blockquote>"O módulo de suprimentos nos poupou mais de R$ 2 milhões no ano passado com o controle de cotações e os alertas de preço acima do orçado."</blockquote>
+        <div class="testimonial-author">
+          <div class="author-avatar">AM</div>
+          <div><div class="author-name">Ana Monteiro</div><div class="author-role">Gerente de Compras – Grupo Alfa Construções</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <blockquote>"Gerenciar 40 obras ao mesmo tempo era um caos. Com a plataforma, hoje tenho visibilidade de cada obra no mesmo painel. Recomendo demais."</blockquote>
+        <div class="testimonial-author">
+          <div class="author-avatar">PF</div>
+          <div><div class="author-name">Paulo Ferreira</div><div class="author-role">Engenheiro-Chefe – PF Empreendimentos</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ PRICING ══════════════════ -->
+<section class="section section-gray" id="planos">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="badge badge-blue">Planos</div>
+      <h2 class="section-title">Planos flexíveis para cada porte</h2>
+      <p class="section-sub">Contrate apenas os módulos que sua empresa precisa. Escale conforme crescer.</p>
+    </div>
+    <div class="grid-3 fade-up" style="align-items:start">
+      <div class="pricing-card">
+        <div class="pricing-name">Starter</div>
+        <div class="pricing-price"><sup>R$</sup>890</div>
+        <div class="pricing-period">/mês · até 5 usuários</div>
+        <div class="pricing-desc">Ideal para pequenas construtoras que precisam organizar obras e compras.</div>
+        <ul class="pricing-features">
+          <li>Módulo Engenharia</li>
+          <li>Módulo Suprimentos (básico)</li>
+          <li>Módulo Financeiro (básico)</li>
+          <li>App mobile</li>
+          <li>Suporte por e-mail</li>
+          <li class="no">Módulo Incorporação</li>
+          <li class="no">Contabilidade e Fiscal</li>
+          <li class="no">RH e Folha</li>
+        </ul>
+        <a href="#demo" class="btn btn-secondary" style="width:100%;justify-content:center">Começar agora</a>
+      </div>
+      <div class="pricing-card featured">
+        <div class="pricing-badge">Mais popular</div>
+        <div class="pricing-name">Profissional</div>
+        <div class="pricing-price"><sup>R$</sup>2.490</div>
+        <div class="pricing-period">/mês · até 20 usuários</div>
+        <div class="pricing-desc">Para construtoras e incorporadoras em crescimento que precisam de gestão completa.</div>
+        <ul class="pricing-features">
+          <li>Todos do Starter</li>
+          <li>Módulo Incorporação</li>
+          <li>Contabilidade e Fiscal</li>
+          <li>RH e Folha de Pagamento</li>
+          <li>Módulo Qualidade</li>
+          <li>Integrações bancárias</li>
+          <li>Suporte por chat e telefone</li>
+          <li>Treinamento incluso</li>
+        </ul>
+        <a href="#demo" class="btn btn-primary" style="width:100%;justify-content:center">Solicitar demo</a>
+      </div>
+      <div class="pricing-card">
+        <div class="pricing-name">Enterprise</div>
+        <div class="pricing-price" style="font-size:32px">Sob medida</div>
+        <div class="pricing-period">usuários ilimitados</div>
+        <div class="pricing-desc">Para grandes grupos com múltiplas empresas, volumes elevados e necessidades customizadas.</div>
+        <ul class="pricing-features">
+          <li>Todos do Profissional</li>
+          <li>Módulos customizados</li>
+          <li>API ilimitada</li>
+          <li>Integração BIM avançada</li>
+          <li>Ambiente dedicado (on-premise)</li>
+          <li>SLA premium 24/7</li>
+          <li>Gerente de conta exclusivo</li>
+          <li>Implantação assistida</li>
+        </ul>
+        <a href="#demo" class="btn btn-secondary" style="width:100%;justify-content:center">Falar com especialista</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ FAQ ══════════════════ -->
+<section class="section" id="faq">
+  <div class="container" style="max-width:800px">
+    <div class="section-header fade-up">
+      <div class="badge badge-blue">Dúvidas Frequentes</div>
+      <h2 class="section-title">Perguntas frequentes</h2>
+    </div>
+    <div class="fade-up">
+      <div class="faq-item">
+        <button class="faq-question">A ConstroERP funciona para construtoras de qualquer porte?</button>
+        <div class="faq-answer"><p>Sim. Atendemos desde pequenas construtoras com 5 usuários até grandes grupos com centenas de usuários e dezenas de obras simultâneas. Os planos são modulares e você contrata apenas o que precisa, podendo escalar com o crescimento da empresa.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Quanto tempo leva a implantação?</button>
+        <div class="faq-answer"><p>A implantação padrão leva entre 30 e 90 dias, dependendo dos módulos contratados e da complexidade da operação. Disponibilizamos equipe dedicada de implantação, treinamentos ao vivo e material de apoio para acelerar a adoção pela equipe.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">O sistema roda na nuvem? Como fica a segurança dos dados?</button>
+        <div class="faq-answer"><p>Sim, a plataforma é 100% cloud. Utilizamos infraestrutura AWS com criptografia em trânsito e em repouso, backups automáticos diários e SLA de 99,9% de disponibilidade. Somos conformes com a LGPD e passamos por auditorias de segurança periódicas.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">É possível integrar com o sistema que já uso?</button>
+        <div class="faq-answer"><p>Contamos com mais de 25 integrações nativas (Revit, bancos, SEFAZ, BI) e uma API RESTful aberta e documentada. Nossa equipe técnica avalia integrações customizadas no plano Enterprise.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Como funciona o suporte?</button>
+        <div class="faq-answer"><p>O suporte varia conforme o plano: Starter conta com suporte por e-mail em horário comercial, Profissional inclui chat e telefone em horário comercial, e o Enterprise tem SLA premium 24/7 com gerente de conta exclusivo.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question">Posso migrar meus dados de outro sistema?</button>
+        <div class="faq-answer"><p>Sim. Temos processo estruturado de migração de dados e ferramentas de importação para os principais sistemas do mercado. A equipe de implantação auxilia durante todo o processo de migração sem custo adicional nos planos Profissional e Enterprise.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ DEMO FORM ══════════════════ -->
+<section class="section" id="demo" style="background:linear-gradient(135deg,#f8f9fa,#e8f0fe)">
+  <div class="container" style="max-width:700px">
+    <div class="section-header fade-up">
+      <div class="badge badge-orange">Demonstração Gratuita</div>
+      <h2 class="section-title">Veja a ConstroERP em ação</h2>
+      <p class="section-sub">Agende uma demo personalizada com um dos nossos especialistas em construção civil.</p>
+    </div>
+    <div class="fade-up" style="background:#fff;border-radius:16px;padding:48px;box-shadow:var(--shadow)">
+      <form id="demoForm" style="display:flex;flex-direction:column;gap:20px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--gray-800)">Nome completo *</label>
+            <input type="text" placeholder="Seu nome" required style="width:100%;padding:12px 14px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;outline:none;transition:var(--transition)" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--gray-200)'">
+          </div>
+          <div>
+            <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--gray-800)">E-mail corporativo *</label>
+            <input type="email" placeholder="seu@empresa.com.br" required style="width:100%;padding:12px 14px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;outline:none;transition:var(--transition)" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--gray-200)'">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--gray-800)">Empresa *</label>
+            <input type="text" placeholder="Nome da construtora" required style="width:100%;padding:12px 14px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;outline:none;transition:var(--transition)" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--gray-200)'">
+          </div>
+          <div>
+            <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--gray-800)">Telefone *</label>
+            <input type="tel" placeholder="(11) 9 9999-9999" required style="width:100%;padding:12px 14px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;outline:none;transition:var(--transition)" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--gray-200)'">
+          </div>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--gray-800)">Número de obras simultâneas</label>
+          <select style="width:100%;padding:12px 14px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;background:#fff;outline:none;transition:var(--transition)" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--gray-200)'">
+            <option>1 a 5 obras</option>
+            <option>6 a 20 obras</option>
+            <option>21 a 50 obras</option>
+            <option>Mais de 50 obras</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--gray-800)">Quais módulos mais te interessam?</label>
+          <div style="display:flex;flex-wrap:wrap;gap:10px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" style="accent-color:var(--blue)"> Engenharia</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" style="accent-color:var(--blue)"> Suprimentos</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" style="accent-color:var(--blue)"> Financeiro</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" style="accent-color:var(--blue)"> Incorporação</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" style="accent-color:var(--blue)"> Contabilidade</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" style="accent-color:var(--blue)"> RH e Folha</label>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;font-size:16px;padding:16px">Solicitar demonstração gratuita →</button>
+        <p style="font-size:12px;color:var(--gray-600);text-align:center">Sem compromisso. Resposta em até 1 dia útil. Seus dados são protegidos pela LGPD.</p>
+      </form>
+      <div id="formSuccess" style="display:none;text-align:center;padding:32px 0">
+        <div style="font-size:48px;margin-bottom:16px">🎉</div>
+        <h3 style="font-size:22px;font-weight:800;margin-bottom:10px">Solicitação recebida!</h3>
+        <p style="color:var(--gray-600)">Nossa equipe entrará em contato em até 1 dia útil para agendar sua demonstração personalizada.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ CTA BANNER ══════════════════ -->
+<section class="cta-banner">
+  <div class="container">
+    <h2>Pronto para transformar sua construtora?</h2>
+    <p>Junte-se a mais de 5.000 empresas que já escolheram a ConstroERP.</p>
+    <div class="btn-group">
+      <a href="#demo" class="btn btn-white">Solicitar demonstração gratuita</a>
+      <a href="#planos" class="btn" style="background:transparent;color:#fff;border:2px solid rgba(255,255,255,.4)">Conhecer planos</a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ FOOTER ══════════════════ -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo" style="color:#fff">
+          <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+          Constro<span>ERP</span>
+        </div>
+        <p>O ecossistema completo para a indústria da construção civil. Conectamos engenharia, finanças e suprimentos em uma única plataforma.</p>
+        <div class="footer-social">
+          <div class="social-btn">in</div>
+          <div class="social-btn">yt</div>
+          <div class="social-btn">ig</div>
+          <div class="social-btn">fb</div>
+        </div>
+      </div>
+      <div>
+        <h4>Plataforma</h4>
+        <ul>
+          <li><a href="#engenharia">Módulo Engenharia</a></li>
+          <li><a href="#suprimentos">Módulo Suprimentos</a></li>
+          <li><a href="#financeiro">Módulo Financeiro</a></li>
+          <li><a href="#incorporacao">Módulo Incorporação</a></li>
+          <li><a href="#modulos">Contabilidade e Fiscal</a></li>
+          <li><a href="#modulos">RH e Folha</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="#">Sobre nós</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Cases de sucesso</a></li>
+          <li><a href="#">Trabalhe conosco</a></li>
+          <li><a href="#">Parceiros</a></li>
+          <li><a href="#">Imprensa</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Suporte</h4>
+        <ul>
+          <li><a href="#">Central de ajuda</a></li>
+          <li><a href="#">Documentação API</a></li>
+          <li><a href="#">Status do sistema</a></li>
+          <li><a href="#">Política de privacidade</a></li>
+          <li><a href="#">Termos de uso</a></li>
+          <li><a href="#demo">Fale conosco</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 ConstroERP. Todos os direitos reservados.</span>
+      <span>🇧🇷 Feito no Brasil para o Brasil</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Mobile menu toggle
+  const hamburger = document.getElementById('hamburger');
+  const mobileMenu = document.getElementById('mobileMenu');
+  hamburger.addEventListener('click', () => {
+    mobileMenu.classList.toggle('active');
+  });
+  mobileMenu.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => mobileMenu.classList.remove('active'));
+  });
+
+  // FAQ accordion
+  document.querySelectorAll('.faq-question').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const isOpen = btn.classList.contains('open');
+      document.querySelectorAll('.faq-question').forEach(b => {
+        b.classList.remove('open');
+        b.nextElementSibling.classList.remove('open');
       });
-    }
-
-    // ───── Clouds ─────
-    for (let i = 0; i < 5; i++) {
-      clouds.push({
-        x: Math.random() * W,
-        y: Math.random() * (H * 0.55),
-        w: Math.random() * 80 + 60,
-        speed: Math.random() * 0.4 + 0.2,
-        alpha: Math.random() * 0.15 + 0.05,
-      });
-    }
-
-    // ───── Utilities ─────
-    function rand(a, b) { return Math.random() * (b - a) + a; }
-    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-
-    function spawnParticle(x, y, color, count = 6, speed = 3) {
-      for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const s = Math.random() * speed + 1;
-        particles.push({
-          x, y,
-          vx: Math.cos(angle) * s,
-          vy: Math.sin(angle) * s,
-          life: 1,
-          decay: Math.random() * 0.03 + 0.02,
-          r: Math.random() * 4 + 2,
-          color,
-        });
-      }
-    }
-
-    function spawnCoin(x, gapTop) {
-      coins.push({
-        x,
-        y: gapTop + GAP / 2,
-        r: 10,
-        angle: 0,
-        collected: false,
-      });
-    }
-
-    function spawnPowerup(x, gapTop) {
-      if (Math.random() < 0.18) {
-        powerups.push({
-          x,
-          y: gapTop + GAP / 2 + rand(-30, 30),
-          r: 13,
-          angle: 0,
-          collected: false,
-        });
-      }
-    }
-
-    function spawnObstacle() {
-      const minTop = 60;
-      const maxTop = H - GAP - 60;
-      const gapTop = rand(minTop, maxTop);
-      obstacles.push({
-        x: W + 20,
-        gapTop,
-        width: 52,
-        passed: false,
-        hue: Math.floor(rand(180, 280)),
-      });
-      spawnCoin(W + 20 + 26, gapTop);
-      spawnPowerup(W + 20 + 26, gapTop);
-    }
-
-    function reset() {
-      player.y = H / 2;
-      player.vy = 0;
-      player.vx = 0;
-      player.alive = true;
-      player.trail = [];
-      player.powerup = 0;
-      obstacles = [];
-      coins = [];
-      powerups = [];
-      particles = [];
-      obstacleTimer = 0;
-      obstacleSpeed = 3.2;
-      obstacleInterval = 120;
-      score = 0;
-      level = 1;
-      frame = 0;
-    }
-
-    function flap() {
-      if (!player.alive) return;
-      player.vy = player.flapPower;
-      player.flapping = true;
-      player.flapTimer = 12;
-      spawnParticle(player.x - 10, player.y + 10, '#4af', 4, 2);
-    }
-
-    // ───── Input ─────
-    window.addEventListener('keydown', e => {
-      if (e.code === 'Space' || e.code === 'ArrowUp') {
-        e.preventDefault();
-        if (state === STATE.MENU || state === STATE.DEAD) {
-          reset();
-          state = STATE.PLAYING;
-          msgEl.style.display = 'none';
-        } else {
-          flap();
-        }
+      if (!isOpen) {
+        btn.classList.add('open');
+        btn.nextElementSibling.classList.add('open');
       }
     });
-
-    canvas.addEventListener('pointerdown', () => {
-      if (state === STATE.MENU || state === STATE.DEAD) {
-        reset();
-        state = STATE.PLAYING;
-        msgEl.style.display = 'none';
-      } else {
-        flap();
-      }
-    });
-
-    // ───── Draw helpers ─────
-    function drawGradientRect(x, y, w, h, color1, color2, vertical = true) {
-      const grad = vertical
-        ? ctx.createLinearGradient(x, y, x, y + h)
-        : ctx.createLinearGradient(x, y, x + w, y);
-      grad.addColorStop(0, color1);
-      grad.addColorStop(1, color2);
-      ctx.fillStyle = grad;
-      ctx.fillRect(x, y, w, h);
-    }
-
-    function drawPillar(x, gapTop, width, hue) {
-      const capH = 22;
-
-      // Top pillar
-      const gradT = ctx.createLinearGradient(x, 0, x + width, 0);
-      gradT.addColorStop(0, `hsl(${hue},70%,25%)`);
-      gradT.addColorStop(0.5, `hsl(${hue},70%,40%)`);
-      gradT.addColorStop(1, `hsl(${hue},70%,20%)`);
-      ctx.fillStyle = gradT;
-      ctx.fillRect(x, 0, width, gapTop);
-
-      // Top cap
-      ctx.fillStyle = `hsl(${hue},70%,50%)`;
-      ctx.beginPath();
-      ctx.roundRect(x - 6, gapTop - capH, width + 12, capH, 6);
-      ctx.fill();
-
-      // Bottom pillar
-      const gradB = ctx.createLinearGradient(x, 0, x + width, 0);
-      gradB.addColorStop(0, `hsl(${hue},70%,25%)`);
-      gradB.addColorStop(0.5, `hsl(${hue},70%,40%)`);
-      gradB.addColorStop(1, `hsl(${hue},70%,20%)`);
-      ctx.fillStyle = gradB;
-      const botY = gapTop + GAP;
-      ctx.fillRect(x, botY, width, H - botY);
-
-      // Bottom cap
-      ctx.fillStyle = `hsl(${hue},70%,50%)`;
-      ctx.beginPath();
-      ctx.roundRect(x - 6, botY, width + 12, capH, 6);
-      ctx.fill();
-
-      // Glow edges
-      ctx.strokeStyle = `hsla(${hue},90%,70%,0.5)`;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x, 0, width, gapTop);
-      ctx.strokeRect(x, botY, width, H - botY);
-    }
-
-    function drawMan(x, y, flapping, powerup) {
-      ctx.save();
-      ctx.translate(x, y);
-
-      // Shield glow
-      if (powerup > 0) {
-        const pulse = 0.7 + 0.3 * Math.sin(frame * 0.15);
-        ctx.beginPath();
-        ctx.arc(0, 0, 34 * pulse, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(0,200,255,${0.6 * pulse})`;
-        ctx.lineWidth = 4;
-        ctx.stroke();
-      }
-
-      // Cape (flowing)
-      const capeWave = Math.sin(frame * 0.12) * 6;
-      ctx.fillStyle = '#c00';
-      ctx.beginPath();
-      ctx.moveTo(-4, -8);
-      ctx.quadraticCurveTo(-20 + capeWave, 0, -18 + capeWave * 0.5, 18);
-      ctx.quadraticCurveTo(-8, 10, -4, 8);
-      ctx.closePath();
-      ctx.fill();
-
-      // Body
-      const bodyGrad = ctx.createLinearGradient(-12, -14, 12, 14);
-      bodyGrad.addColorStop(0, '#2255dd');
-      bodyGrad.addColorStop(1, '#112288');
-      ctx.fillStyle = bodyGrad;
-      ctx.beginPath();
-      ctx.roundRect(-12, -14, 24, 28, 6);
-      ctx.fill();
-
-      // "S" logo
-      ctx.fillStyle = '#ffe94a';
-      ctx.font = 'bold 13px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('H', 0, 0);
-
-      // Legs
-      ctx.strokeStyle = '#113399';
-      ctx.lineWidth = 5;
-      ctx.lineCap = 'round';
-      const kick = Math.sin(frame * 0.15) * 12;
-      ctx.beginPath();
-      ctx.moveTo(-5, 14);
-      ctx.lineTo(-6 - kick * 0.3, 26 + kick * 0.2);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(5, 14);
-      ctx.lineTo(6 + kick * 0.3, 26 - kick * 0.2);
-      ctx.stroke();
-
-      // Boots
-      ctx.fillStyle = '#cc3300';
-      ctx.beginPath();
-      ctx.ellipse(-6 - kick * 0.3, 28 + kick * 0.2, 6, 4, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(6 + kick * 0.3, 28 - kick * 0.2, 6, 4, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Wings
-      const wA = flapping ? Math.sin(frame * 0.6) * 0.5 : Math.sin(frame * 0.08) * 0.25;
-      ctx.fillStyle = 'rgba(150,220,255,0.85)';
-
-      // Left wing
-      ctx.save();
-      ctx.rotate(-wA - 0.2);
-      ctx.beginPath();
-      ctx.moveTo(-10, -6);
-      ctx.bezierCurveTo(-32, -20, -38, 4, -20, 8);
-      ctx.bezierCurveTo(-14, 10, -10, 2, -10, -6);
-      ctx.fill();
-      ctx.restore();
-
-      // Right wing
-      ctx.save();
-      ctx.rotate(wA + 0.2);
-      ctx.beginPath();
-      ctx.moveTo(10, -6);
-      ctx.bezierCurveTo(32, -20, 38, 4, 20, 8);
-      ctx.bezierCurveTo(14, 10, 10, 2, 10, -6);
-      ctx.fill();
-      ctx.restore();
-
-      // Arms
-      ctx.strokeStyle = '#2255dd';
-      ctx.lineWidth = 4;
-      const armSwing = Math.sin(frame * 0.15) * 8;
-      ctx.beginPath();
-      ctx.moveTo(-10, -4);
-      ctx.lineTo(-22, 4 + armSwing);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(10, -4);
-      ctx.lineTo(22, 4 - armSwing);
-      ctx.stroke();
-
-      // Head
-      const headGrad = ctx.createRadialGradient(-3, -24, 2, 0, -22, 13);
-      headGrad.addColorStop(0, '#ffe0b0');
-      headGrad.addColorStop(1, '#cc8855');
-      ctx.fillStyle = headGrad;
-      ctx.beginPath();
-      ctx.arc(0, -22, 13, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Eyes
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.ellipse(-4, -23, 3.5, 3, 0, 0, Math.PI * 2);
-      ctx.ellipse(4, -23, 3.5, 3, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#1a1a44';
-      ctx.beginPath();
-      ctx.arc(-4, -23, 1.8, 0, Math.PI * 2);
-      ctx.arc(4, -23, 1.8, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Mask
-      ctx.fillStyle = '#113399';
-      ctx.beginPath();
-      ctx.ellipse(0, -21, 8, 4, 0, 0, Math.PI);
-      ctx.fill();
-
-      // Hair
-      ctx.fillStyle = '#1a0a00';
-      ctx.beginPath();
-      ctx.ellipse(0, -34, 9, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Smile
-      ctx.strokeStyle = '#aa5500';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(0, -19, 5, 0.2, Math.PI - 0.2);
-      ctx.stroke();
-
-      ctx.restore();
-    }
-
-    function drawCoin(coin) {
-      ctx.save();
-      ctx.translate(coin.x, coin.y);
-      ctx.rotate(coin.angle);
-      const scale = Math.abs(Math.cos(coin.angle));
-      ctx.scale(scale, 1);
-      ctx.beginPath();
-      ctx.arc(0, 0, coin.r, 0, Math.PI * 2);
-      const g = ctx.createRadialGradient(-3, -3, 1, 0, 0, coin.r);
-      g.addColorStop(0, '#fff7a0');
-      g.addColorStop(0.5, '#ffd700');
-      g.addColorStop(1, '#b8860b');
-      ctx.fillStyle = g;
-      ctx.fill();
-      ctx.strokeStyle = '#daa520';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    function drawPowerup(pu) {
-      ctx.save();
-      ctx.translate(pu.x, pu.y);
-      ctx.rotate(pu.angle);
-      const pulse = 0.85 + 0.15 * Math.sin(frame * 0.1);
-      ctx.scale(pulse, pulse);
-      ctx.beginPath();
-      ctx.arc(0, 0, pu.r, 0, Math.PI * 2);
-      const g = ctx.createRadialGradient(-4, -4, 1, 0, 0, pu.r);
-      g.addColorStop(0, '#a0ffff');
-      g.addColorStop(0.5, '#00ccff');
-      g.addColorStop(1, '#0066bb');
-      ctx.fillStyle = g;
-      ctx.fill();
-      ctx.strokeStyle = '#00eeff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 13px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('★', 0, 0);
-      ctx.restore();
-    }
-
-    function drawBackground() {
-      // Sky gradient
-      const sky = ctx.createLinearGradient(0, 0, 0, H);
-      sky.addColorStop(0, '#050518');
-      sky.addColorStop(0.5, '#0a1030');
-      sky.addColorStop(1, '#101845');
-      ctx.fillStyle = sky;
-      ctx.fillRect(0, 0, W, H);
-
-      // Stars
-      for (const s of stars) {
-        s.twinkle += 0.04;
-        const alpha = 0.5 + 0.5 * Math.sin(s.twinkle);
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-        ctx.fill();
-        s.x -= s.speed;
-        if (s.x < 0) { s.x = W; s.y = Math.random() * H; }
-      }
-
-      // Clouds
-      for (const c of clouds) {
-        ctx.globalAlpha = c.alpha;
-        ctx.fillStyle = '#8899cc';
-        ctx.beginPath();
-        ctx.ellipse(c.x, c.y, c.w, c.w * 0.35, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(c.x - c.w * 0.3, c.y + 6, c.w * 0.5, c.w * 0.25, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(c.x + c.w * 0.3, c.y + 6, c.w * 0.4, c.w * 0.22, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        c.x -= c.speed;
-        if (c.x + c.w < 0) { c.x = W + c.w; c.y = Math.random() * H * 0.55; }
-      }
-    }
-
-    function drawTrail() {
-      for (let i = 0; i < player.trail.length; i++) {
-        const t = player.trail[i];
-        const alpha = (i / player.trail.length) * 0.35;
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, 5 * (i / player.trail.length), 0, Math.PI * 2);
-        ctx.fillStyle = player.powerup > 0
-          ? `rgba(0,220,255,${alpha})`
-          : `rgba(80,160,255,${alpha})`;
-        ctx.fill();
-      }
-    }
-
-    function drawParticles() {
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        ctx.globalAlpha = p.life;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.fill();
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.1;
-        p.life -= p.decay;
-        if (p.life <= 0) particles.splice(i, 1);
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    function drawHUD() {
-      // Score
-      scoreEl.textContent = `Pontos: ${score}`;
-      levelEl.textContent = `Nível: ${level}`;
-      highEl.textContent = `Recorde: ${highScore}`;
-
-      // Shield bar
-      if (player.powerup > 0) {
-        const bw = 120, bh = 8;
-        const bx = W / 2 - bw / 2, by = 12;
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
-        const pct = player.powerup / 200;
-        const sg = ctx.createLinearGradient(bx, by, bx + bw, by);
-        sg.addColorStop(0, '#00eeff');
-        sg.addColorStop(1, '#0088cc');
-        ctx.fillStyle = sg;
-        ctx.fillRect(bx, by, bw * pct, bh);
-        ctx.fillStyle = '#fff';
-        ctx.font = '9px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('ESCUDO', W / 2, by + 20);
-      }
-    }
-
-    function showMessage(text, sub = '') {
-      msgEl.innerHTML = text + (sub ? `<br><span style="font-size:16px;opacity:0.7">${sub}</span>` : '');
-      msgEl.style.display = 'block';
-      // Center over canvas
-      const rect = canvas.getBoundingClientRect();
-      msgEl.style.top = (rect.top + H / 2 - 50) + 'px';
-      msgEl.style.left = rect.left + 'px';
-      msgEl.style.width = W + 'px';
-    }
-
-    // ───── Collision ─────
-    function circleRect(cx, cy, cr, rx, ry, rw, rh) {
-      const nx = clamp(cx, rx, rx + rw);
-      const ny = clamp(cy, ry, ry + rh);
-      return (cx - nx) ** 2 + (cy - ny) ** 2 < cr * cr;
-    }
-
-    function checkCollisions() {
-      const px = player.x, py = player.y, pr = 14;
-
-      // Wall / ceiling
-      if (py - pr <= 0 || py + pr >= H) return true;
-
-      // Obstacles
-      for (const ob of obstacles) {
-        if (ob.x > px + pr + ob.width) continue;
-        if (ob.x + ob.width < px - pr) continue;
-        if (player.powerup > 0) continue; // shield
-        // Top pillar
-        if (circleRect(px, py, pr, ob.x - 6, 0, ob.width + 12, ob.gapTop)) return true;
-        // Bottom pillar
-        if (circleRect(px, py, pr, ob.x - 6, ob.gapTop + GAP, ob.width + 12, H - ob.gapTop - GAP)) return true;
-      }
-      return false;
-    }
-
-    // ───── Update ─────
-    function update() {
-      frame++;
-
-      // Level progression
-      const newLevel = 1 + Math.floor(score / 8);
-      if (newLevel > level) {
-        level = newLevel;
-        obstacleSpeed = 3.2 + level * 0.4;
-        obstacleInterval = Math.max(65, 120 - level * 7);
-        spawnParticle(player.x, player.y, '#ffe94a', 16, 4);
-      }
-
-      // Player physics
-      player.vy += player.gravity;
-      player.vy = clamp(player.vy, -12, player.maxVy);
-      player.y += player.vy;
-
-      if (player.flapTimer > 0) player.flapTimer--;
-      else player.flapping = false;
-      if (player.powerup > 0) player.powerup--;
-
-      // Trail
-      player.trail.push({ x: player.x, y: player.y });
-      if (player.trail.length > 18) player.trail.shift();
-
-      // Jet particles
-      if (frame % 3 === 0) {
-        spawnParticle(player.x - 8, player.y + 5,
-          player.powerup > 0 ? '#00eeff' : '#4af', 2, 1.5);
-      }
-
-      // Obstacles
-      obstacleTimer++;
-      if (obstacleTimer >= obstacleInterval) {
-        obstacleTimer = 0;
-        spawnObstacle();
-      }
-
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-        const ob = obstacles[i];
-        ob.x -= obstacleSpeed;
-        if (!ob.passed && ob.x + ob.width < player.x) {
-          ob.passed = true;
-          score++;
-          spawnParticle(player.x, player.y, '#ffe94a', 8, 3);
-        }
-        if (ob.x + ob.width < -20) obstacles.splice(i, 1);
-      }
-
-      // Coins
-      for (let i = coins.length - 1; i >= 0; i--) {
-        const c = coins[i];
-        c.x -= obstacleSpeed;
-        c.angle += 0.07;
-        if (!c.collected) {
-          const dx = player.x - c.x, dy = player.y - c.y;
-          if (dx * dx + dy * dy < (player.powerup > 0 ? 30 : 20) ** 2) {
-            c.collected = true;
-            score += 1;
-            spawnParticle(c.x, c.y, '#ffd700', 10, 3);
-          }
-        }
-        if (c.x < -20) coins.splice(i, 1);
-      }
-
-      // Powerups
-      for (let i = powerups.length - 1; i >= 0; i--) {
-        const pu = powerups[i];
-        pu.x -= obstacleSpeed;
-        pu.angle += 0.04;
-        if (!pu.collected) {
-          const dx = player.x - pu.x, dy = player.y - pu.y;
-          if (dx * dx + dy * dy < 22 ** 2) {
-            pu.collected = true;
-            player.powerup = 200;
-            spawnParticle(pu.x, pu.y, '#00eeff', 16, 4);
-          }
-        }
-        if (pu.x < -20) powerups.splice(i, 1);
-      }
-
-      // Collisions
-      if (checkCollisions()) {
-        player.alive = false;
-        spawnParticle(player.x, player.y, '#ff4444', 20, 5);
-        if (score > highScore) highScore = score;
-        state = STATE.DEAD;
-        setTimeout(() => {
-          showMessage(
-            '💀 Você caiu!',
-            `Pontos: ${score} | Recorde: ${highScore}<br>Espaço / Toque para recomeçar`
-          );
-        }, 500);
-      }
-    }
-
-    // ───── Draw ─────
-    function draw() {
-      drawBackground();
-      drawTrail();
-
-      // Obstacles
-      for (const ob of obstacles) drawPillar(ob.x, ob.gapTop, ob.width, ob.hue);
-
-      // Coins
-      for (const c of coins) if (!c.collected) drawCoin(c);
-
-      // Powerups
-      for (const pu of powerups) if (!pu.collected) drawPowerup(pu);
-
-      // Player
-      drawMan(player.x, player.y, player.flapping, player.powerup);
-
-      // Particles (above everything)
-      drawParticles();
-
-      drawHUD();
-    }
-
-    // ───── Menu / overlay ─────
-    function drawMenu() {
-      drawBackground();
-      drawParticles();
-
-      // Title
-      ctx.save();
-      ctx.textAlign = 'center';
-      const t = frame * 0.03;
-
-      // Glow title
-      ctx.shadowColor = '#4af';
-      ctx.shadowBlur = 24;
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 46px Arial';
-      ctx.fillText('HOMEM VOADOR', W / 2, H / 2 - 80);
-      ctx.shadowBlur = 0;
-
-      ctx.font = '20px Arial';
-      ctx.fillStyle = '#aaddff';
-      ctx.fillText('Pressione ESPAÇO ou toque para voar!', W / 2, H / 2 - 30);
-
-      // Animated man demo
-      const demoY = H / 2 + 50 + Math.sin(t * 2) * 18;
-      drawMan(W / 2, demoY, true, 0);
-
-      ctx.font = '15px Arial';
-      ctx.fillStyle = '#8899bb';
-      ctx.fillText('⬆ Espaço / Toque  — voar', W / 2, H - 50);
-      ctx.fillText('Colete moedas  ★ = escudo  Desvie dos pilares', W / 2, H - 30);
-
-      ctx.restore();
-    }
-
-    // ───── Main loop ─────
-    function loop() {
-      ctx.clearRect(0, 0, W, H);
-
-      if (state === STATE.PLAYING) {
-        update();
-        draw();
-      } else if (state === STATE.MENU) {
-        frame++;
-        // Drift demo particles
-        if (frame % 20 === 0) spawnParticle(rand(0, W), rand(0, H), '#4af', 3, 1);
-        drawMenu();
-      } else if (state === STATE.DEAD) {
-        frame++;
-        drawBackground();
-        drawParticles();
-        for (const ob of obstacles) drawPillar(ob.x, ob.gapTop, ob.width, ob.hue);
-        for (const c of coins) if (!c.collected) drawCoin(c);
-        drawMan(player.x, player.y, false, 0);
-        drawHUD();
-      }
-
-      requestAnimationFrame(loop);
-    }
-
-    // Kick off
-    showMessage('HOMEM VOADOR', 'Pressione Espaço ou toque para começar');
-    loop();
-  </script>
+  });
+
+  // Scroll animations
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+  // Demo form
+  document.getElementById('demoForm').addEventListener('submit', e => {
+    e.preventDefault();
+    document.getElementById('demoForm').style.display = 'none';
+    document.getElementById('formSuccess').style.display = 'block';
+  });
+</script>
 </body>
 </html>
