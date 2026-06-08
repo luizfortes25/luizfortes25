@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConstroERP – Sistema</title>
+<style>
+:root{
+  --blue:#0052cc;--blue-d:#003a99;--blue-l:#e8f0fe;
+  --orange:#ff6b00;--orange-l:#fff3e8;
+  --green:#16a34a;--green-l:#dcfce7;
+  --red:#dc2626;--red-l:#fee2e2;
+  --yellow:#d97706;--yellow-l:#fef3c7;
+  --gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;
+  --gray-400:#9ca3af;--gray-600:#4b5563;--gray-800:#1f2937;
+  --text:#111827;--white:#fff;
+  --sidebar:240px;--topbar:56px;
+  --radius:10px;--shadow:0 2px 12px rgba(0,0,0,.08);--t:.2s ease;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;color:var(--text);}
+a{text-decoration:none;color:inherit;}
+button{cursor:pointer;font-family:inherit;border:none;background:none;}
+
+/* ── LOGIN ── */
+#loginScreen{
+  position:fixed;inset:0;background:linear-gradient(135deg,#0a1628,#0052cc);
+  display:flex;align-items:center;justify-content:center;z-index:9999;
+}
+.login-box{background:#fff;border-radius:16px;padding:48px 40px;width:380px;max-width:92vw;box-shadow:0 32px 80px rgba(0,0,0,.4);}
+.login-logo{font-size:22px;font-weight:900;color:var(--blue);text-align:center;margin-bottom:8px;}
+.login-logo span{color:var(--orange);}
+.login-sub{text-align:center;font-size:13px;color:var(--gray-600);margin-bottom:32px;}
+.login-group{margin-bottom:16px;}
+.login-group label{display:block;font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
+.login-input{width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;outline:none;transition:var(--t);}
+.login-input:focus{border-color:var(--blue);}
+.login-btn{width:100%;padding:13px;background:var(--blue);color:#fff;border-radius:8px;font-size:15px;font-weight:700;margin-top:8px;transition:var(--t);}
+.login-btn:hover{background:var(--blue-d);}
+.login-hint{text-align:center;font-size:12px;color:var(--gray-400);margin-top:14px;}
+
+/* ── SHELL ── */
+#shell{display:none;height:100vh;overflow:hidden;}
+#shell.visible{display:flex;flex-direction:column;}
+
+/* ── TOPBAR ── */
+.topbar{
+  height:var(--topbar);background:var(--blue-d);color:#fff;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;flex-shrink:0;z-index:100;
+  box-shadow:0 2px 8px rgba(0,0,0,.2);
+}
+.tb-left{display:flex;align-items:center;gap:16px;}
+.tb-logo{font-size:18px;font-weight:900;}
+.tb-logo span{color:var(--orange);}
+.tb-sep{width:1px;height:24px;background:rgba(255,255,255,.2);}
+.tb-company{font-size:12px;color:rgba(255,255,255,.7);font-weight:600;}
+.tb-right{display:flex;align-items:center;gap:10px;}
+.tb-icon-btn{position:relative;background:rgba(255,255,255,.1);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px;color:rgba(255,255,255,.85);transition:var(--t);}
+.tb-icon-btn:hover{background:rgba(255,255,255,.2);}
+.tb-badge{position:absolute;top:4px;right:4px;width:14px;height:14px;background:var(--orange);border-radius:50%;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.tb-user{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border-radius:20px;padding:5px 12px 5px 6px;cursor:pointer;}
+.tb-avatar{width:28px;height:28px;background:var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;}
+.tb-username{font-size:13px;font-weight:600;}
+
+/* ── BODY ── */
+.body{display:flex;flex:1;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:var(--sidebar);flex-shrink:0;background:#fff;
+  border-right:1px solid var(--gray-200);overflow-y:auto;
+  display:flex;flex-direction:column;
+}
+.sidebar::-webkit-scrollbar{width:4px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--gray-200);border-radius:4px;}
+.s-section{padding:16px 10px 4px;}
+.s-label{font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.08em;padding:0 8px;margin-bottom:4px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;font-size:13px;font-weight:500;color:var(--gray-600);cursor:pointer;transition:var(--t);width:100%;text-align:left;}
+.nav-item:hover{background:var(--gray-100);color:var(--text);}
+.nav-item.active{background:var(--blue-l);color:var(--blue);font-weight:700;}
+.nav-item .ni{width:17px;text-align:center;font-size:14px;flex-shrink:0;}
+.nav-item .nb{margin-left:auto;background:var(--orange);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;}
+.nav-item .nb.b{background:var(--blue);}
+.nav-sub{padding-left:10px;}
+.nav-sub .nav-item{font-size:12px;padding:6px 10px;}
+.s-footer{margin-top:auto;padding:12px 10px;border-top:1px solid var(--gray-200);}
+
+/* ── MAIN ── */
+.main{flex:1;overflow-y:auto;background:var(--gray-50);}
+.main::-webkit-scrollbar{width:6px;}
+.main::-webkit-scrollbar-thumb{background:var(--gray-200);border-radius:4px;}
+.page{display:none;padding:28px 32px;}
+.page.active{display:block;}
+
+/* ── COMPONENTS ── */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.ph h1{font-size:20px;font-weight:800;}
+.ph p{font-size:13px;color:var(--gray-600);margin-top:2px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:7px;font-size:13px;font-weight:600;border:1.5px solid transparent;transition:var(--t);cursor:pointer;}
+.btn-p{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-p:hover{background:var(--blue-d);}
+.btn-o{background:#fff;color:var(--text);border-color:var(--gray-200);}
+.btn-o:hover{border-color:var(--blue);color:var(--blue);}
+.btn-s{background:var(--green);color:#fff;}
+.btn-s:hover{opacity:.88;}
+.btn-r{background:var(--red);color:#fff;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.card{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);box-shadow:var(--shadow);}
+.card-p{padding:20px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+@media(max-width:1100px){.grid4{grid-template-columns:1fr 1fr;}}
+@media(max-width:700px){.grid2,.grid3,.grid4{grid-template-columns:1fr;}.page{padding:16px;}}
+
+/* ── KPI CARD ── */
+.kpi{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);padding:18px 20px;box-shadow:var(--shadow);}
+.kpi .k-label{font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+.kpi .k-val{font-size:26px;font-weight:900;}
+.kpi .k-delta{font-size:11px;margin-top:4px;}
+.k-up{color:var(--green);}
+.k-down{color:var(--red);}
+.k-warn{color:var(--yellow);}
+
+/* ── TABLE ── */
+.tcard{background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);box-shadow:var(--shadow);overflow:hidden;}
+.ttoolbar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--gray-200);flex-wrap:wrap;gap:10px;}
+.ttoolbar h3{font-size:14px;font-weight:700;}
+.tsearch{border:1.5px solid var(--gray-200);border-radius:7px;padding:7px 12px;font-size:13px;outline:none;transition:var(--t);width:200px;}
+.tsearch:focus{border-color:var(--blue);}
+.filter-row{display:flex;gap:8px;padding:10px 18px;border-bottom:1px solid var(--gray-200);flex-wrap:wrap;}
+.fb{padding:4px 12px;border-radius:16px;font-size:12px;font-weight:600;border:1.5px solid var(--gray-200);background:#fff;color:var(--gray-600);cursor:pointer;transition:var(--t);}
+.fb.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+.fb:hover:not(.on){border-color:var(--blue);color:var(--blue);}
+table{width:100%;border-collapse:collapse;}
+th{padding:10px 16px;font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;background:var(--gray-50);text-align:left;border-bottom:1px solid var(--gray-200);}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid var(--gray-100);vertical-align:middle;}
+tr:last-child td{border:none;}
+tr:hover td{background:var(--gray-50);}
+.tag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap;}
+.tg{background:var(--green-l);color:var(--green);}
+.to{background:var(--orange-l);color:var(--orange);}
+.tb2{background:var(--blue-l);color:var(--blue);}
+.tr{background:var(--red-l);color:var(--red);}
+.ty{background:var(--yellow-l);color:var(--yellow);}
+.tgr{background:var(--gray-100);color:var(--gray-600);}
+.ra{display:flex;gap:6px;}
+
+/* ── MINI CHART ── */
+.chart-wrap{display:flex;align-items:flex-end;gap:5px;height:80px;padding:8px 0;}
+.bar-c{flex:1;border-radius:3px 3px 0 0;transition:.3s;}
+.chart-labels{display:flex;gap:5px;font-size:10px;color:var(--gray-400);padding:0;}
+.chart-labels span{flex:1;text-align:center;}
+
+/* ── PROGRESS ── */
+.pb{background:var(--gray-200);border-radius:4px;height:7px;overflow:hidden;}
+.pf{height:100%;border-radius:4px;background:var(--blue);}
+
+/* ── FORM ── */
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.fg label{font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.05em;}
+.fi{border:1.5px solid var(--gray-200);border-radius:7px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;transition:var(--t);background:#fff;width:100%;}
+.fi:focus{border-color:var(--blue);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#fff;border-radius:8px;padding:14px 20px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:9000;display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:.3s ease;}
+.toast.show{transform:none;opacity:1;}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:800;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;border-radius:14px;width:560px;max-width:95vw;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.25);}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between;background:var(--blue-d);color:#fff;}
+.modal-head h3{font-size:15px;font-weight:700;}
+.modal-close{font-size:20px;color:rgba(255,255,255,.7);line-height:1;}
+.modal-body{padding:22px;overflow-y:auto;}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--gray-200);display:flex;gap:10px;justify-content:flex-end;}
+
+/* ── TIMELINE ── */
+.timeline{display:flex;flex-direction:column;gap:0;}
+.tl-item{display:flex;gap:14px;position:relative;}
+.tl-item:not(:last-child)::before{content:'';position:absolute;left:10px;top:22px;bottom:-8px;width:2px;background:var(--gray-200);}
+.tl-dot{width:20px;height:20px;border-radius:50%;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;}
+.tl-body{padding-bottom:18px;}
+.tl-title{font-size:13px;font-weight:700;}
+.tl-sub{font-size:12px;color:var(--gray-600);margin-top:2px;}
+
+/* ── WORKFLOW ── */
+.wf{display:flex;align-items:center;gap:0;margin-bottom:20px;flex-wrap:nowrap;overflow-x:auto;}
+.wf-step{display:flex;flex-direction:column;align-items:center;flex:1;min-width:80px;position:relative;}
+.wf-step:not(:last-child)::after{content:'';position:absolute;top:14px;left:calc(50% + 14px);right:calc(-50% + 14px);height:2px;background:var(--gray-200);}
+.wf-step.done::after{background:var(--green);}
+.wf-step.cur::after{background:linear-gradient(90deg,var(--green),var(--gray-200));}
+.wf-circle{width:28px;height:28px;border-radius:50%;border:2px solid var(--gray-200);background:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--gray-400);z-index:1;margin-bottom:6px;}
+.wf-step.done .wf-circle{background:var(--green);border-color:var(--green);color:#fff;}
+.wf-step.cur .wf-circle{background:var(--blue);border-color:var(--blue);color:#fff;}
+.wf-lbl{font-size:10px;color:var(--gray-400);text-align:center;font-weight:600;}
+.wf-step.done .wf-lbl,.wf-step.cur .wf-lbl{color:var(--text);}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">🏗️ Constro<span>ERP</span></div>
+    <div class="login-sub">Gestão Inteligente da Construção Civil</div>
+    <div class="login-group">
+      <label>E-mail</label>
+      <input class="login-input" type="email" value="ricardo@construtora.com.br" id="loginEmail">
+    </div>
+    <div class="login-group">
+      <label>Senha</label>
+      <input class="login-input" type="password" value="••••••••" id="loginPass">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Entrar no Sistema</button>
+    <div class="login-hint">Acesso demo: qualquer e-mail / senha</div>
+  </div>
+</div>
+
+<!-- ═══ SHELL ═══ -->
+<div id="shell">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tb-logo">🏗️ Constro<span>ERP</span></div>
+      <div class="tb-sep"></div>
+      <div class="tb-company">Construtora Horizonte S.A.</div>
+    </div>
+    <div class="tb-right">
+      <button class="tb-icon-btn" onclick="toast('3 notificações pendentes','🔔')">🔔<span class="tb-badge">3</span></button>
+      <button class="tb-icon-btn" onclick="toast('Pesquisa global','🔍')">🔍</button>
+      <button class="tb-icon-btn">⚙️</button>
+      <div class="tb-user" onclick="toast('Perfil do usuário','👤')">
+        <div class="tb-avatar">RC</div>
+        <span class="tb-username">Ricardo Costa</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="s-section">
+        <button class="nav-item active" onclick="go('dashboard')"><span class="ni">📊</span>Dashboard</button>
+      </div>
+      <div class="s-section">
+        <div class="s-label">Engenharia</div>
+        <button class="nav-item" onclick="go('obras')"><span class="ni">🏗️</span>Obras</button>
+        <button class="nav-item" onclick="go('orcamentos')"><span class="ni">📐</span>Orçamentos</button>
+        <button class="nav-item" onclick="go('cronograma')"><span class="ni">📅</span>Cronograma</button>
+        <button class="nav-item" onclick="go('diario')"><span class="ni">📓</span>Diário de Obra</button>
+        <button class="nav-item" onclick="go('medicoes')"><span class="ni">📏</span>Medições</button>
+      </div>
+      <div class="s-section">
+        <div class="s-label">Suprimentos</div>
+        <button class="nav-item" onclick="go('solicitacoes')"><span class="ni">📝</span>Solicitações<span class="nb b">4</span></button>
+        <button class="nav-item" onclick="go('pedidos')"><span class="ni">🛒</span>Pedidos de Compra</button>
+        <button class="nav-item" onclick="go('aprovacoes')"><span class="ni">✅</span>Aprovações<span class="nb">3</span></button>
+        <button class="nav-item" onclick="go('estoque')"><span class="ni">📦</span>Estoque</button>
+        <button class="nav-item" onclick="go('fornecedores')"><span class="ni">🏭</span>Fornecedores</button>
+      </div>
+      <div class="s-section">
+        <div class="s-label">Financeiro</div>
+        <button class="nav-item" onclick="go('fluxo')"><span class="ni">💧</span>Fluxo de Caixa</button>
+        <button class="nav-item" onclick="go('pagar')"><span class="ni">📤</span>Contas a Pagar</button>
+        <button class="nav-item" onclick="go('receber')"><span class="ni">📥</span>Contas a Receber</button>
+        <button class="nav-item" onclick="go('conciliacao')"><span class="ni">🏦</span>Conciliação</button>
+      </div>
+      <div class="s-section">
+        <div class="s-label">Incorporação</div>
+        <button class="nav-item" onclick="go('empreendimentos')"><span class="ni">🏢</span>Empreendimentos</button>
+        <button class="nav-item" onclick="go('contratos')"><span class="ni">📄</span>Contratos</button>
+        <button class="nav-item" onclick="go('recebiveis')"><span class="ni">💰</span>Recebíveis</button>
+      </div>
+      <div class="s-section">
+        <div class="s-label">RH e Pessoal</div>
+        <button class="nav-item" onclick="go('funcionarios')"><span class="ni">👥</span>Funcionários</button>
+        <button class="nav-item" onclick="go('ponto')"><span class="ni">⏱️</span>Ponto Eletrônico</button>
+        <button class="nav-item" onclick="go('folha')"><span class="ni">💼</span>Folha de Pagamento</button>
+      </div>
+      <div class="s-section">
+        <div class="s-label">Qualidade</div>
+        <button class="nav-item" onclick="go('checklists')"><span class="ni">✔️</span>Checklists</button>
+        <button class="nav-item" onclick="go('ncs')"><span class="ni">⚠️</span>Não Conformidades<span class="nb">2</span></button>
+      </div>
+      <div class="s-footer">
+        <button class="nav-item" style="color:var(--gray-400)" onclick="go('relatorios')"><span class="ni">📈</span>Relatórios</button>
+        <button class="nav-item" style="color:var(--gray-400)"><span class="ni">⚙️</span>Configurações</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="page active" id="page-dashboard">
+        <div class="ph">
+          <div><h1>Dashboard</h1><p>Visão consolidada — Construtora Horizonte S.A.</p></div>
+          <div style="display:flex;gap:8px">
+            <select class="fi" style="width:160px">
+              <option>Junho 2026</option><option>Maio 2026</option>
+            </select>
+            <button class="btn btn-o btn-sm">⬇ Exportar</button>
+          </div>
+        </div>
+
+        <div class="grid4" style="margin-bottom:20px">
+          <div class="kpi"><div class="k-label">Obras Ativas</div><div class="k-val">24</div><div class="k-delta k-up">↑ 3 novas este mês</div></div>
+          <div class="kpi"><div class="k-label">Receita Prevista</div><div class="k-val" style="font-size:20px">R$ 12,4M</div><div class="k-delta k-up">↑ 18% vs ano anterior</div></div>
+          <div class="kpi"><div class="k-label">Custo Realizado</div><div class="k-val" style="font-size:20px">R$ 8,7M</div><div class="k-delta k-warn">70% do orçado</div></div>
+          <div class="kpi"><div class="k-label">Pendências</div><div class="k-val" style="color:var(--orange)">7</div><div class="k-delta k-warn">3 aprovações urgentes</div></div>
+        </div>
+
+        <div class="grid2" style="margin-bottom:20px">
+          <div class="card card-p">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between">
+              Evolução de Receita (R$ mil)
+              <span style="font-size:11px;color:var(--gray-400);font-weight:400">Jan–Jun 2026</span>
+            </div>
+            <div class="chart-wrap">
+              <div class="bar-c" style="height:55%;background:var(--blue);opacity:.7" title="Jan: R$1,6M"></div>
+              <div class="bar-c" style="height:70%;background:var(--blue);opacity:.7" title="Fev: R$2,0M"></div>
+              <div class="bar-c" style="height:60%;background:var(--blue);opacity:.7" title="Mar: R$1,8M"></div>
+              <div class="bar-c" style="height:85%;background:var(--blue)" title="Abr: R$2,5M"></div>
+              <div class="bar-c" style="height:75%;background:var(--blue)" title="Mai: R$2,2M"></div>
+              <div class="bar-c" style="height:92%;background:var(--orange)" title="Jun: R$2,7M"></div>
+            </div>
+            <div class="chart-labels"><span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span></div>
+          </div>
+          <div class="card card-p">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px">Status das Obras</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>Residencial Palmeiras</span><span style="font-weight:700">82%</span></div><div class="pb"><div class="pf" style="width:82%;background:var(--green)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>Torres Azul</span><span style="font-weight:700">47%</span></div><div class="pb"><div class="pf" style="width:47%"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>Parque das Flores</span><span style="font-weight:700">23%</span></div><div class="pb"><div class="pf" style="width:23%;background:var(--orange)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>Villas do Sol</span><span style="font-weight:700">8%</span></div><div class="pb"><div class="pf" style="width:8%;background:var(--yellow)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>Loteamento Bela Vista</span><span style="font-weight:700">61%</span></div><div class="pb"><div class="pf" style="width:61%"></div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid3" style="margin-bottom:20px">
+          <div class="card card-p">
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px">⏳ Aprovações Urgentes</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--orange-l);border-radius:8px;cursor:pointer" onclick="go('aprovacoes')">
+                <div><div style="font-size:12px;font-weight:700">OC-2041 — Cimento</div><div style="font-size:11px;color:var(--gray-600)">R$ 78.960 · Palmeiras</div></div>
+                <span class="tag to">Urgente</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--orange-l);border-radius:8px;cursor:pointer" onclick="go('aprovacoes')">
+                <div><div style="font-size:12px;font-weight:700">OC-2040 — Vergalhão</div><div style="font-size:11px;color:var(--gray-600)">R$ 151.200 · Torres Azul</div></div>
+                <span class="tag to">Urgente</span>
+              </div>
+              <button class="btn btn-p" style="width:100%;justify-content:center;font-size:12px" onclick="go('aprovacoes')">Ver todas as aprovações →</button>
+            </div>
+          </div>
+          <div class="card card-p">
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px">📥 A Receber — Próximos 30d</div>
+            <div style="font-size:28px;font-weight:900;color:var(--green);margin-bottom:4px">R$ 920k</div>
+            <div style="font-size:12px;color:var(--gray-600);margin-bottom:14px">12 parcelas a receber</div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;justify-content:space-between;font-size:12px"><span>Torres Azul — Unid. 304</span><span style="font-weight:700">R$ 148k</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px"><span>Palmeiras — Unid. 102</span><span style="font-weight:700">R$ 96k</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px"><span>Flores — Unid. 201</span><span style="font-weight:700">R$ 72k</span></div>
+            </div>
+          </div>
+          <div class="card card-p">
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px">🚚 Entregas Hoje</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="padding:10px;background:var(--green-l);border-radius:8px">
+                <div style="font-size:12px;font-weight:700">Cimento CP II — 2.400sc</div>
+                <div style="font-size:11px;color:var(--gray-600)">Palmeiras · 8h–12h · Confirmada</div>
+              </div>
+              <div style="padding:10px;background:var(--blue-l);border-radius:8px">
+                <div style="font-size:12px;font-weight:700">Tinta Acrílica — 200lt</div>
+                <div style="font-size:11px;color:var(--gray-600)">Torres Azul · 14h–18h</div>
+              </div>
+              <button class="btn btn-o" style="width:100%;justify-content:center;font-size:12px" onclick="go('pedidos')">Ver cronograma de entregas →</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Últimas Movimentações</h3><input class="tsearch" placeholder="🔍 Buscar..."></div>
+          <table>
+            <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Obra</th><th>Valor</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>08/06</td><td><span class="tag tb2">Compra</span></td><td>OC-2041 – Cimento CP II</td><td>Palmeiras</td><td>R$ 78.960</td><td><span class="tag to">Ag. Aprovação</span></td></tr>
+              <tr><td>07/06</td><td><span class="tag tg">Recebimento</span></td><td>Parcela 3/24 – Unid. 304 Torres Azul</td><td>Torres Azul</td><td>R$ 148.000</td><td><span class="tag tg">Recebido</span></td></tr>
+              <tr><td>07/06</td><td><span class="tag tr">Pagamento</span></td><td>Folha de Pagamento – Jun/26</td><td>—</td><td>R$ 432.800</td><td><span class="tag tg">Pago</span></td></tr>
+              <tr><td>06/06</td><td><span class="tag tb2">Compra</span></td><td>OC-2039 – Tijolo 9cm</td><td>Bela Vista</td><td>R$ 34.000</td><td><span class="tag tb2">Em cotação</span></td></tr>
+              <tr><td>06/06</td><td><span class="tag ty">Ocorrência</span></td><td>NC-047 – Infiltração Pav.3 Flores</td><td>Flores</td><td>—</td><td><span class="tag ty">Aberta</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ OBRAS ══ -->
+      <div class="page" id="page-obras">
+        <div class="ph">
+          <div><h1>Obras</h1><p>Gerenciamento de todas as obras em andamento</p></div>
+          <button class="btn btn-p" onclick="toast('Nova obra criada','🏗️')">+ Nova Obra</button>
+        </div>
+        <div class="grid4" style="margin-bottom:20px">
+          <div class="kpi"><div class="k-label">Total de Obras</div><div class="k-val">24</div></div>
+          <div class="kpi"><div class="k-label">Em Andamento</div><div class="k-val" style="color:var(--blue)">18</div></div>
+          <div class="kpi"><div class="k-label">Concluídas 2026</div><div class="k-val" style="color:var(--green)">4</div></div>
+          <div class="kpi"><div class="k-label">Planejadas</div><div class="k-val" style="color:var(--gray-400)">2</div></div>
+        </div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Lista de Obras</h3>
+            <div style="display:flex;gap:8px">
+              <input class="tsearch" placeholder="🔍 Buscar obra...">
+              <button class="btn btn-o btn-sm">🗺️ Mapa</button>
+            </div>
+          </div>
+          <div class="filter-row">
+            <button class="fb on">Todas</button>
+            <button class="fb">Em andamento</button>
+            <button class="fb">Concluídas</button>
+            <button class="fb">Planejadas</button>
+          </div>
+          <table>
+            <thead><tr><th>Obra</th><th>Tipo</th><th>Avanço</th><th>Custo Orçado</th><th>Custo Real</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>Residencial Palmeiras</strong><div style="font-size:11px;color:var(--gray-400)">Av. das Palmeiras, 400</div></td><td>Residencial</td><td><div style="display:flex;align-items:center;gap:8px"><div class="pb" style="width:80px"><div class="pf" style="width:82%;background:var(--green)"></div></div><span style="font-size:12px;font-weight:700">82%</span></div></td><td>R$ 4,2M</td><td>R$ 3,44M</td><td>30/09/2026</td><td><span class="tag tg">No prazo</span></td><td><button class="btn btn-o btn-sm" onclick="toast('Obra Palmeiras aberta','🏗️')">Abrir</button></td></tr>
+              <tr><td><strong>Torres Azul</strong><div style="font-size:11px;color:var(--gray-400)">Rua Central, 1200</div></td><td>Comercial</td><td><div style="display:flex;align-items:center;gap:8px"><div class="pb" style="width:80px"><div class="pf" style="width:47%"></div></div><span style="font-size:12px;font-weight:700">47%</span></div></td><td>R$ 8,1M</td><td>R$ 3,8M</td><td>30/06/2027</td><td><span class="tag tg">No prazo</span></td><td><button class="btn btn-o btn-sm">Abrir</button></td></tr>
+              <tr><td><strong>Parque das Flores</strong><div style="font-size:11px;color:var(--gray-400)">Rod. Sul, km 12</div></td><td>Residencial</td><td><div style="display:flex;align-items:center;gap:8px"><div class="pb" style="width:80px"><div class="pf" style="width:23%;background:var(--orange)"></div></div><span style="font-size:12px;font-weight:700">23%</span></div></td><td>R$ 6,4M</td><td>R$ 1,47M</td><td>31/12/2027</td><td><span class="tag ty">Atenção</span></td><td><button class="btn btn-o btn-sm">Abrir</button></td></tr>
+              <tr><td><strong>Loteamento Bela Vista</strong><div style="font-size:11px;color:var(--gray-400)">Estrada Velha, s/n</div></td><td>Loteamento</td><td><div style="display:flex;align-items:center;gap:8px"><div class="pb" style="width:80px"><div class="pf" style="width:61%"></div></div><span style="font-size:12px;font-weight:700">61%</span></div></td><td>R$ 2,8M</td><td>R$ 1,71M</td><td>31/03/2027</td><td><span class="tag tg">No prazo</span></td><td><button class="btn btn-o btn-sm">Abrir</button></td></tr>
+              <tr><td><strong>Villas do Sol</strong><div style="font-size:11px;color:var(--gray-400)">Bairro Jardins, 800</div></td><td>Residencial</td><td><div style="display:flex;align-items:center;gap:8px"><div class="pb" style="width:80px"><div class="pf" style="width:8%;background:var(--yellow)"></div></div><span style="font-size:12px;font-weight:700">8%</span></div></td><td>R$ 9,2M</td><td>R$ 736k</td><td>30/06/2028</td><td><span class="tag tg">No prazo</span></td><td><button class="btn btn-o btn-sm">Abrir</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ ORÇAMENTOS ══ -->
+      <div class="page" id="page-orcamentos">
+        <div class="ph"><div><h1>Orçamentos</h1><p>Orçamentos analíticos e paramétricos por obra</p></div><button class="btn btn-p" onclick="toast('Novo orçamento criado','📐')">+ Novo Orçamento</button></div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Orçamentos</h3><input class="tsearch" placeholder="🔍 Buscar..."></div>
+          <table>
+            <thead><tr><th>Código</th><th>Obra</th><th>Versão</th><th>Custo Total</th><th>BDI</th><th>Preço Venda</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>ORC-2024-01</strong></td><td>Residencial Palmeiras</td><td>v3 (atual)</td><td>R$ 3,85M</td><td>22%</td><td>R$ 4,70M</td><td><span class="tag tg">Aprovado</span></td><td><button class="btn btn-o btn-sm" onclick="toast('Orçamento aberto','📐')">Abrir</button></td></tr>
+              <tr><td><strong>ORC-2024-02</strong></td><td>Torres Azul</td><td>v2 (atual)</td><td>R$ 6,64M</td><td>22%</td><td>R$ 8,10M</td><td><span class="tag tg">Aprovado</span></td><td><button class="btn btn-o btn-sm">Abrir</button></td></tr>
+              <tr><td><strong>ORC-2025-01</strong></td><td>Parque das Flores</td><td>v1</td><td>R$ 5,25M</td><td>22%</td><td>R$ 6,40M</td><td><span class="tag ty">Em revisão</span></td><td><button class="btn btn-o btn-sm">Abrir</button></td></tr>
+              <tr><td><strong>ORC-2025-02</strong></td><td>Villas do Sol</td><td>v1</td><td>R$ 7,54M</td><td>22%</td><td>R$ 9,20M</td><td><span class="tag tb2">Em elaboração</span></td><td><button class="btn btn-o btn-sm">Abrir</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ CRONOGRAMA ══ -->
+      <div class="page" id="page-cronograma">
+        <div class="ph"><div><h1>Cronograma</h1><p>Cronograma físico-financeiro — Curva S</p></div>
+          <select class="fi" style="width:200px"><option>Residencial Palmeiras</option><option>Torres Azul</option><option>Parque das Flores</option></select>
+        </div>
+        <div class="card card-p" style="margin-bottom:18px">
+          <div style="font-size:14px;font-weight:700;margin-bottom:14px">Cronograma — Residencial Palmeiras</div>
+          <div style="overflow-x:auto">
+            <table style="min-width:700px">
+              <thead><tr><th>Serviço</th><th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th><th>Jun</th><th>Jul</th><th>Ago</th><th>Set</th><th>% Prev.</th><th>% Real.</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Fundações</strong></td><td style="background:#dbeafe">████</td><td style="background:#dbeafe">████</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td>100%</td><td><span style="color:var(--green);font-weight:700">100%</span></td></tr>
+                <tr><td><strong>Estrutura</strong></td><td></td><td style="background:#dbeafe">████</td><td style="background:#dbeafe">████</td><td style="background:#dbeafe">████</td><td style="background:#dbeafe">████</td><td style="background:#dbeafe">████</td><td></td><td></td><td></td><td>100%</td><td><span style="color:var(--blue);font-weight:700">78%</span></td></tr>
+                <tr><td><strong>Alvenaria</strong></td><td></td><td></td><td></td><td style="background:#dcfce7">████</td><td style="background:#dcfce7">████</td><td style="background:#dcfce7">████</td><td style="background:#dcfce7">████</td><td></td><td></td><td>60%</td><td><span style="color:var(--blue);font-weight:700">35%</span></td></tr>
+                <tr><td><strong>Instalações</strong></td><td></td><td></td><td></td><td></td><td></td><td style="background:#fef9c3">████</td><td style="background:#fef9c3">████</td><td style="background:#fef9c3">████</td><td></td><td>0%</td><td><span style="color:var(--gray-400)">—</span></td></tr>
+                <tr><td><strong>Acabamento</strong></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="background:#fce7f3">████</td><td style="background:#fce7f3">████</td><td>0%</td><td><span style="color:var(--gray-400)">—</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ DIÁRIO DE OBRA ══ -->
+      <div class="page" id="page-diario">
+        <div class="ph"><div><h1>Diário de Obra</h1><p>Registro diário de atividades, equipes e ocorrências</p></div><button class="btn btn-p" onclick="openModal('modalDiario')">+ Novo Registro</button></div>
+        <div class="grid2" style="margin-bottom:18px">
+          <div class="tcard">
+            <div class="ttoolbar"><h3>Registros Recentes</h3></div>
+            <table>
+              <thead><tr><th>Data</th><th>Obra</th><th>Resp.</th><th>Clima</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>08/06/26</td><td>Palmeiras</td><td>Eng. Rafael</td><td>☀️ Sol</td><td><button class="btn btn-o btn-sm" onclick="toast('Diário aberto','📓')">Ver</button></td></tr>
+                <tr><td>07/06/26</td><td>Torres Azul</td><td>Eng. Patrícia</td><td>⛅ Nublado</td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+                <tr><td>07/06/26</td><td>Palmeiras</td><td>Eng. Rafael</td><td>🌧️ Chuva</td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+                <tr><td>06/06/26</td><td>Flores</td><td>Eng. José</td><td>☀️ Sol</td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card card-p">
+            <div style="font-size:14px;font-weight:700;margin-bottom:14px">📓 Registro — 08/06/2026 · Palmeiras</div>
+            <div style="font-size:13px;color:var(--gray-600);line-height:1.7;margin-bottom:14px">Concretagem do 2º pavimento concluída (250m³). Equipe de estrutura: 18 operários. Início da alvenaria no pavimento térreo. Sem ocorrências relevantes. Material entregue conforme OC-2038.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <span class="tag tb2">Concretagem</span>
+              <span class="tag tg">Alvenaria</span>
+              <span class="tag tgr">18 operários</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ MEDIÇÕES ══ -->
+      <div class="page" id="page-medicoes">
+        <div class="ph"><div><h1>Medições</h1><p>Medições de contrato com aprovação eletrônica</p></div><button class="btn btn-p" onclick="toast('Nova medição criada','📏')">+ Nova Medição</button></div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Medições por Contrato</h3><input class="tsearch" placeholder="🔍 Buscar..."></div>
+          <table>
+            <thead><tr><th>Medição</th><th>Contrato</th><th>Obra</th><th>Período</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>MED-0142</strong></td><td>Cont. Estrutura 001</td><td>Palmeiras</td><td>Maio/26</td><td>R$ 248.000</td><td><span class="tag tg">Aprovada</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+              <tr><td><strong>MED-0143</strong></td><td>Cont. Alvenaria 002</td><td>Palmeiras</td><td>Maio/26</td><td>R$ 84.000</td><td><span class="tag to">Ag. Aprovação</span></td><td><button class="btn btn-o btn-sm" onclick="toast('Medição aprovada!','✅')">Aprovar</button></td></tr>
+              <tr><td><strong>MED-0144</strong></td><td>Cont. Estrutura 003</td><td>Torres Azul</td><td>Maio/26</td><td>R$ 312.000</td><td><span class="tag tb2">Em análise</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ SOLICITAÇÕES ══ -->
+      <div class="page" id="page-solicitacoes">
+        <div class="ph"><div><h1>Solicitações de Compra</h1><p>POST /purchase-requests</p></div><button class="btn btn-p" onclick="go('nova-sc')">+ Nova Solicitação</button></div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Solicitações</h3><input class="tsearch" placeholder="🔍 Buscar..."></div>
+          <div class="filter-row"><button class="fb on">Todas</button><button class="fb">Abertas</button><button class="fb">Em cotação</button><button class="fb">Convertidas</button></div>
+          <table>
+            <thead><tr><th>SC #</th><th>Obra</th><th>Responsável</th><th>Itens</th><th>Data</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>SC-0582</strong></td><td>Palmeiras</td><td>Eng. Rafael</td><td>4</td><td>08/06</td><td><span class="tag tb2">Em cotação</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+              <tr><td><strong>SC-0581</strong></td><td>Torres Azul</td><td>Eng. Patrícia</td><td>7</td><td>07/06</td><td><span class="tag tg">Convertida</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+              <tr><td><strong>SC-0580</strong></td><td>Flores</td><td>Eng. José</td><td>2</td><td>06/06</td><td><span class="tag to">Aguardando</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ NOVA SC ══ -->
+      <div class="page" id="page-nova-sc">
+        <div class="ph"><div><button onclick="go('solicitacoes')" style="font-size:13px;color:var(--blue);font-weight:600;margin-bottom:4px;display:block">← Voltar</button><h1>Nova Solicitação de Compra</h1></div></div>
+        <div class="card card-p">
+          <div class="grid2"><div class="fg"><label>Obra *</label><select class="fi"><option>Residencial Palmeiras</option><option>Torres Azul</option><option>Parque das Flores</option></select></div>
+          <div class="fg"><label>Data de Necessidade *</label><input class="fi" type="date" value="2026-06-20"></div>
+          <div class="fg"><label>Centro de Custo</label><select class="fi"><option>002 – Estrutura</option><option>003 – Alvenaria</option><option>004 – Instalações</option></select></div>
+          <div class="fg"><label>Prioridade</label><select class="fi"><option>Normal</option><option>Alta</option><option>Urgente</option></select></div></div>
+          <div style="font-size:14px;font-weight:700;margin:20px 0 12px;padding-top:16px;border-top:1px solid var(--gray-200)">Itens</div>
+          <table style="margin-bottom:12px"><thead><tr><th>Material</th><th>Un</th><th>Qtd</th><th>Obs</th><th></th></tr></thead>
+          <tbody id="scItens">
+            <tr><td><input class="fi" style="width:170px" value="Cimento CP II"></td><td><select class="fi" style="width:70px"><option>sc</option><option>m³</option><option>kg</option><option>t</option><option>un</option></select></td><td><input class="fi" type="number" style="width:80px" value="500"></td><td><input class="fi" placeholder="—"></td><td><button onclick="this.closest('tr').remove()" style="color:var(--red);font-size:16px">✕</button></td></tr>
+          </tbody></table>
+          <button onclick="addSCRow()" style="font-size:13px;color:var(--blue);font-weight:600;margin-bottom:20px">➕ Adicionar item</button>
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn btn-o" onclick="go('solicitacoes')">Cancelar</button>
+            <button class="btn btn-p" onclick="toast('SC-0583 enviada ao ERP!','📤');go('solicitacoes')">Enviar ao ERP →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ PEDIDOS ══ -->
+      <div class="page" id="page-pedidos">
+        <div class="ph"><div><h1>Pedidos de Compra</h1><p>GET /purchase-orders</p></div></div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Pedidos</h3><input class="tsearch" placeholder="🔍 Buscar OC, fornecedor..."></div>
+          <div class="filter-row"><button class="fb on">Todos</button><button class="fb">Ag. Aprovação (3)</button><button class="fb">Em cotação (7)</button><button class="fb">Autorizados</button></div>
+          <table>
+            <thead><tr><th>OC #</th><th>Fornecedor</th><th>Obra</th><th>Valor</th><th>Vencimento</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>OC-2041</strong></td><td>Cimento Nacional</td><td>Palmeiras</td><td>R$ 78.960</td><td>15/06</td><td><span class="tag to">Ag. Aprovação</span></td><td><div class="ra"><button class="btn btn-o btn-sm" onclick="openModal('modalOC')">Ver</button><button class="btn btn-s btn-sm" onclick="toast('OC-2041 autorizada!','✅')">✓</button></div></td></tr>
+              <tr><td><strong>OC-2040</strong></td><td>AçoFácil</td><td>Torres Azul</td><td>R$ 151.200</td><td>18/06</td><td><span class="tag to">Ag. Aprovação</span></td><td><div class="ra"><button class="btn btn-o btn-sm">Ver</button><button class="btn btn-s btn-sm" onclick="toast('OC-2040 autorizada!','✅')">✓</button></div></td></tr>
+              <tr><td><strong>OC-2039</strong></td><td>—</td><td>Bela Vista</td><td>R$ 34.000</td><td>—</td><td><span class="tag tb2">Em cotação</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+              <tr><td><strong>OC-2038</strong></td><td>Areias do Norte</td><td>Bela Vista</td><td>R$ 14.160</td><td>12/06</td><td><span class="tag tg">Autorizado</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ APROVAÇÕES ══ -->
+      <div class="page" id="page-aprovacoes">
+        <div class="ph"><div><h1>Aprovações Pendentes</h1><p>3 pedidos aguardando — PUT /purchase-orders/{id}/authorize</p></div></div>
+        <div style="display:flex;flex-direction:column;gap:14px" id="aprovList">
+          <div class="card card-p" id="aprov-2041">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:12px">
+              <div><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><strong style="font-size:15px">OC-2041</strong><span class="tag to">Ag. Aprovação</span></div><div style="font-size:13px;color:var(--gray-600)">Cimento Nacional Ltda · Palmeiras · 2.400 sacos CP II</div></div>
+              <div style="text-align:right"><div style="font-size:22px;font-weight:900">R$ 78.960</div><div style="font-size:11px;color:var(--gray-600)">Melhor cotação: R$32,90/sc ✓</div></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-s" onclick="aprovItem('2041')">✓ Autorizar</button>
+              <button class="btn btn-o" onclick="openModal('modalOC')">Ver detalhes</button>
+              <button class="btn btn-r btn-sm" onclick="aprovItem('2041',true)">✕ Recusar</button>
+            </div>
+          </div>
+          <div class="card card-p" id="aprov-2040">
+            <div style="background:var(--yellow-l);border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px">⚠️ <strong>Valor 12% acima do orçado.</strong> Alta do aço — eng. aprovou necessidade.</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:12px">
+              <div><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><strong style="font-size:15px">OC-2040</strong><span class="tag to">Ag. Aprovação</span></div><div style="font-size:13px;color:var(--gray-600)">AçoFácil Distribuidora · Torres Azul · 18t Vergalhão CA-50</div></div>
+              <div style="text-align:right"><div style="font-size:22px;font-weight:900">R$ 151.200</div><div style="font-size:11px;color:var(--red)">+12% vs. orçado</div></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-s" onclick="aprovItem('2040')">✓ Autorizar com Ressalva</button>
+              <button class="btn btn-o">Ver detalhes</button>
+              <button class="btn btn-r btn-sm" onclick="aprovItem('2040',true)">✕ Recusar</button>
+            </div>
+          </div>
+          <div class="card card-p" id="aprov-2042">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:12px">
+              <div><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><strong style="font-size:15px">OC-2042</strong><span class="tag to">Ag. Aprovação</span></div><div style="font-size:13px;color:var(--gray-600)">Tintas & Cia · Flores · 500 latas Tinta Acrílica</div></div>
+              <div style="text-align:right"><div style="font-size:22px;font-weight:900">R$ 18.750</div><div style="font-size:11px;color:var(--green)">Dentro do orçado ✓</div></div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-s" onclick="aprovItem('2042')">✓ Autorizar</button>
+              <button class="btn btn-r btn-sm" onclick="aprovItem('2042',true)">✕ Recusar</button>
+            </div>
+          </div>
+          <div id="aprovEmpty" style="display:none;text-align:center;padding:48px;color:var(--gray-400)"><div style="font-size:40px;margin-bottom:10px">🎉</div><p>Todas as aprovações foram processadas!</p></div>
+        </div>
+      </div>
+
+      <!-- ══ ESTOQUE ══ -->
+      <div class="page" id="page-estoque">
+        <div class="ph"><div><h1>Estoque</h1><p>Controle de materiais por obra e almoxarifado</p></div></div>
+        <div class="grid4" style="margin-bottom:18px">
+          <div class="kpi"><div class="k-label">Itens Cadastrados</div><div class="k-val">1.248</div></div>
+          <div class="kpi"><div class="k-label">Itens Abaixo Min.</div><div class="k-val" style="color:var(--red)">12</div><div class="k-delta k-down">Reposição urgente</div></div>
+          <div class="kpi"><div class="k-label">Valor em Estoque</div><div class="k-val" style="font-size:18px">R$ 1,24M</div></div>
+          <div class="kpi"><div class="k-label">Giro do Estoque</div><div class="k-val">18d</div><div class="k-delta k-up">Médio 2026</div></div>
+        </div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Itens em Estoque</h3><input class="tsearch" placeholder="🔍 Buscar material..."></div>
+          <table>
+            <thead><tr><th>Material</th><th>Unidade</th><th>Saldo Atual</th><th>Estoque Mín.</th><th>Obra / Local</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Cimento CP II 50kg</strong></td><td>sc</td><td>480</td><td>200</td><td>Palmeiras</td><td><span class="tag tg">OK</span></td></tr>
+              <tr><td><strong>Vergalhão CA-50 10mm</strong></td><td>kg</td><td>3.200</td><td>5.000</td><td>Torres Azul</td><td><span class="tag tr">Abaixo mín.</span></td></tr>
+              <tr><td><strong>Tijolo 9cm</strong></td><td>un</td><td>12.400</td><td>8.000</td><td>Palmeiras</td><td><span class="tag tg">OK</span></td></tr>
+              <tr><td><strong>Areia Fina</strong></td><td>m³</td><td>18</td><td>30</td><td>Bela Vista</td><td><span class="tag ty">Atenção</span></td></tr>
+              <tr><td><strong>Brita 3/4</strong></td><td>m³</td><td>42</td><td>20</td><td>Palmeiras</td><td><span class="tag tg">OK</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ FORNECEDORES ══ -->
+      <div class="page" id="page-fornecedores">
+        <div class="ph"><div><h1>Fornecedores</h1><p>Cadastro e avaliação de desempenho</p></div><button class="btn btn-p" onclick="toast('Novo fornecedor','🏭')">+ Novo</button></div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Fornecedores</h3><input class="tsearch" placeholder="🔍 Buscar..."></div>
+          <table>
+            <thead><tr><th>Razão Social</th><th>CNPJ</th><th>Categoria</th><th>Avaliação</th><th>Pontualidade</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Cimento Nacional Ltda</strong></td><td>12.345.678/0001</td><td>Mat. básicos</td><td>★★★★★ 4.8</td><td><span style="color:var(--green);font-weight:700">96%</span></td><td><span class="tag tg">Aprovado</span></td></tr>
+              <tr><td><strong>AçoFácil Distribuidora</strong></td><td>98.765.432/0001</td><td>Ferro e aço</td><td>★★★★☆ 4.2</td><td><span style="color:var(--green);font-weight:700">89%</span></td><td><span class="tag tg">Aprovado</span></td></tr>
+              <tr><td><strong>Areias do Norte ME</strong></td><td>55.432.198/0001</td><td>Agregados</td><td>★★★☆☆ 3.1</td><td><span style="color:var(--red);font-weight:700">71%</span></td><td><span class="tag ty">Em análise</span></td></tr>
+              <tr><td><strong>Britagem Qualidade SA</strong></td><td>44.321.987/0001</td><td>Agregados</td><td>★★★★★ 4.6</td><td><span style="color:var(--green);font-weight:700">93%</span></td><td><span class="tag tg">Aprovado</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ FLUXO DE CAIXA ══ -->
+      <div class="page" id="page-fluxo">
+        <div class="ph"><div><h1>Fluxo de Caixa</h1><p>Realizado e projetado por obra</p></div>
+          <select class="fi" style="width:160px"><option>Consolidado</option><option>Palmeiras</option><option>Torres Azul</option></select>
+        </div>
+        <div class="grid3" style="margin-bottom:18px">
+          <div class="kpi"><div class="k-label">Saldo Atual</div><div class="k-val" style="color:var(--green)">R$ 1,84M</div></div>
+          <div class="kpi"><div class="k-label">A Receber (30d)</div><div class="k-val">R$ 920k</div></div>
+          <div class="kpi"><div class="k-label">A Pagar (30d)</div><div class="k-val" style="color:var(--red)">R$ 687k</div></div>
+        </div>
+        <div class="grid2" style="margin-bottom:18px">
+          <div class="card card-p">
+            <div style="font-size:13px;font-weight:700;margin-bottom:14px">Projeção 6 Meses</div>
+            <div class="chart-wrap">
+              <div class="bar-c" style="height:75%;background:var(--green);opacity:.7"></div>
+              <div class="bar-c" style="height:88%;background:var(--green);opacity:.7"></div>
+              <div class="bar-c" style="height:65%;background:var(--green);opacity:.7"></div>
+              <div class="bar-c" style="height:95%;background:var(--green)"></div>
+              <div class="bar-c" style="height:72%;background:var(--orange);opacity:.7"></div>
+              <div class="bar-c" style="height:60%;background:var(--orange);opacity:.7"></div>
+            </div>
+            <div class="chart-labels"><span>Jun</span><span>Jul</span><span>Ago</span><span>Set</span><span>Out</span><span>Nov</span></div>
+          </div>
+          <div class="card card-p">
+            <div style="font-size:13px;font-weight:700;margin-bottom:14px">Por Categoria (Junho)</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Receita de Vendas</span><span style="color:var(--green);font-weight:700">+R$ 2,4M</span></div><div class="pb"><div class="pf" style="width:90%;background:var(--green)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Mão de Obra</span><span style="color:var(--red);font-weight:700">-R$ 432k</span></div><div class="pb"><div class="pf" style="width:18%;background:var(--red)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Materiais</span><span style="color:var(--red);font-weight:700">-R$ 687k</span></div><div class="pb"><div class="pf" style="width:29%;background:var(--orange)"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Serviços terceiros</span><span style="color:var(--red);font-weight:700">-R$ 248k</span></div><div class="pb"><div class="pf" style="width:10%;background:var(--yellow)"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CONTAS A PAGAR ══ -->
+      <div class="page" id="page-pagar">
+        <div class="ph"><div><h1>Contas a Pagar</h1><p>Gestão de pagamentos e aprovações financeiras</p></div><button class="btn btn-p" onclick="toast('Novo lançamento','💳')">+ Lançar</button></div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Contas a Pagar</h3><input class="tsearch" placeholder="🔍 Buscar..."></div>
+          <div class="filter-row"><button class="fb on">Todas</button><button class="fb">Vencendo hoje (2)</button><button class="fb">Em atraso (1)</button><button class="fb">Pagas</button></div>
+          <table>
+            <thead><tr><th>Descrição</th><th>Fornecedor/Dest.</th><th>Vencimento</th><th>Valor</th><th>Forma</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>OC-2041 – Cimento</strong></td><td>Cimento Nacional</td><td style="color:var(--orange);font-weight:700">15/06 ⏰</td><td>R$ 78.960</td><td>Boleto</td><td><span class="tag to">Pendente</span></td><td><button class="btn btn-s btn-sm" onclick="toast('Pagamento agendado','💳')">Pagar</button></td></tr>
+              <tr><td><strong>Folha Jun/26</strong></td><td>Funcionários</td><td>10/06</td><td>R$ 432.800</td><td>TED</td><td><span class="tag tg">Pago</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+              <tr><td><strong>Aluguel Equipamentos</strong></td><td>Grua & Cia</td><td style="color:var(--red);font-weight:700">05/06 ⚠️</td><td>R$ 18.400</td><td>Boleto</td><td><span class="tag tr">Em atraso</span></td><td><button class="btn btn-r btn-sm" onclick="toast('Contato com fornecedor','📞')">Resolver</button></td></tr>
+              <tr><td><strong>Energia Elétrica</strong></td><td>Concessionária</td><td>20/06</td><td>R$ 8.750</td><td>Débito</td><td><span class="tag tb2">Agendado</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ CONTAS A RECEBER ══ -->
+      <div class="page" id="page-receber">
+        <div class="ph"><div><h1>Contas a Receber</h1><p>Gestão de recebimentos e inadimplência</p></div></div>
+        <div class="grid3" style="margin-bottom:18px">
+          <div class="kpi"><div class="k-label">A Receber (30d)</div><div class="k-val" style="color:var(--green)">R$ 920k</div></div>
+          <div class="kpi"><div class="k-label">Em Atraso</div><div class="k-val" style="color:var(--red)">R$ 84k</div><div class="k-delta k-down">3 contratos</div></div>
+          <div class="kpi"><div class="k-label">Inadimplência</div><div class="k-val" style="color:var(--yellow)">3,2%</div></div>
+        </div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Parcelas a Receber</h3><input class="tsearch" placeholder="🔍 Buscar..."></div>
+          <table>
+            <thead><tr><th>Contrato</th><th>Cliente</th><th>Empreend.</th><th>Vencimento</th><th>Valor</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>CT-1204 – Parc. 8/24</strong></td><td>João P. Oliveira</td><td>Torres Azul 304</td><td>15/06</td><td>R$ 148.000</td><td><span class="tag tb2">A vencer</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+              <tr><td><strong>CT-1187 – Parc. 5/24</strong></td><td>Maria C. Santos</td><td>Palmeiras 102</td><td>10/06</td><td>R$ 96.000</td><td><span class="tag tg">Recebido</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+              <tr><td><strong>CT-1145 – Parc. 3/12</strong></td><td>Carlos A. Lima</td><td>Flores 201</td><td style="color:var(--red);font-weight:700">01/06 ⚠️</td><td>R$ 72.000</td><td><span class="tag tr">Em atraso</span></td><td><button class="btn btn-r btn-sm" onclick="toast('Notificação enviada ao cliente','📧')">Cobrar</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ CONCILIAÇÃO ══ -->
+      <div class="page" id="page-conciliacao">
+        <div class="ph"><div><h1>Conciliação Bancária</h1><p>Importação OFX e Open Finance</p></div><button class="btn btn-p" onclick="toast('Arquivo OFX importado','🏦')">⬆ Importar OFX</button></div>
+        <div class="grid2" style="margin-bottom:18px">
+          <div class="kpi"><div class="k-label">Lançamentos Pendentes</div><div class="k-val" style="color:var(--orange)">14</div></div>
+          <div class="kpi"><div class="k-label">Conciliados Hoje</div><div class="k-val" style="color:var(--green)">38</div></div>
+        </div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Lançamentos para Conciliar</h3></div>
+          <table>
+            <thead><tr><th>Data</th><th>Histórico</th><th>Valor</th><th>Tipo</th><th>Ação</th></tr></thead>
+            <tbody>
+              <tr><td>08/06</td><td>TED RECEBIDA 12345</td><td style="color:var(--green);font-weight:700">+R$ 148.000</td><td>Crédito</td><td><button class="btn btn-s btn-sm" onclick="toast('Lançamento conciliado','✅')">Conciliar</button></td></tr>
+              <tr><td>08/06</td><td>PAGTO BOLETO 78960</td><td style="color:var(--red);font-weight:700">-R$ 78.960</td><td>Débito</td><td><button class="btn btn-s btn-sm" onclick="toast('Lançamento conciliado','✅')">Conciliar</button></td></tr>
+              <tr><td>07/06</td><td>FOLHA PAG JUN26</td><td style="color:var(--red);font-weight:700">-R$ 432.800</td><td>Débito</td><td><span class="tag tg">Conciliado</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ EMPREENDIMENTOS ══ -->
+      <div class="page" id="page-empreendimentos">
+        <div class="ph"><div><h1>Empreendimentos</h1><p>Portfólio e VGV consolidado</p></div><button class="btn btn-p" onclick="toast('Novo empreendimento','🏢')">+ Novo</button></div>
+        <div class="grid4" style="margin-bottom:18px">
+          <div class="kpi"><div class="k-label">VGV Total</div><div class="k-val" style="font-size:18px">R$ 148M</div></div>
+          <div class="kpi"><div class="k-label">Unidades Totais</div><div class="k-val">486</div></div>
+          <div class="kpi"><div class="k-label">Vendidas</div><div class="k-val" style="color:var(--green)">312 (64%)</div></div>
+          <div class="kpi"><div class="k-label">Inadimplência</div><div class="k-val" style="color:var(--yellow)">3,2%</div></div>
+        </div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Empreendimentos</h3></div>
+          <table>
+            <thead><tr><th>Empreendimento</th><th>Un. Vendidas</th><th>VGV</th><th>Rec. Realizada</th><th>Inadimp.</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Residencial Palmeiras</strong></td><td>120/120 (100%)</td><td>R$ 48M</td><td>R$ 42,1M</td><td>2,1%</td><td><span class="tag tg">Entregue</span></td></tr>
+              <tr><td><strong>Torres Azul</strong></td><td>98/120 (82%)</td><td>R$ 54M</td><td>R$ 28,3M</td><td>3,4%</td><td><span class="tag tb2">Em obras</span></td></tr>
+              <tr><td><strong>Parque das Flores</strong></td><td>64/120 (53%)</td><td>R$ 28M</td><td>R$ 8,2M</td><td>1,8%</td><td><span class="tag tb2">Lançamento</span></td></tr>
+              <tr><td><strong>Villas do Sol</strong></td><td>30/126 (24%)</td><td>R$ 18M</td><td>R$ 2,4M</td><td>0%</td><td><span class="tag to">Pré-lançamento</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ CONTRATOS ══ -->
+      <div class="page" id="page-contratos">
+        <div class="ph"><div><h1>Contratos</h1><p>Contratos de compra e venda e distratos</p></div><button class="btn btn-p" onclick="toast('Novo contrato','📄')">+ Novo Contrato</button></div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Contratos Ativos</h3><input class="tsearch" placeholder="🔍 Buscar cliente..."></div>
+          <table>
+            <thead><tr><th>Contrato</th><th>Cliente</th><th>Unidade</th><th>Valor Total</th><th>Parcelas Pagas</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>CT-1204</strong></td><td>João P. Oliveira</td><td>Torres Azul 304</td><td>R$ 780.000</td><td>7/24</td><td><span class="tag tg">Ativo</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+              <tr><td><strong>CT-1187</strong></td><td>Maria C. Santos</td><td>Palmeiras 102</td><td>R$ 420.000</td><td>18/24</td><td><span class="tag tg">Ativo</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+              <tr><td><strong>CT-1145</strong></td><td>Carlos A. Lima</td><td>Flores 201</td><td>R$ 520.000</td><td>2/12</td><td><span class="tag tr">Inadimplente</span></td><td><button class="btn btn-r btn-sm" onclick="toast('Cobrança disparada','📧')">Cobrar</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ RECEBÍVEIS ══ -->
+      <div class="page" id="page-recebiveis">
+        <div class="ph"><div><h1>Carteira de Recebíveis</h1><p>Gestão de recebíveis e repasse bancário</p></div></div>
+        <div class="grid3" style="margin-bottom:18px">
+          <div class="kpi"><div class="k-label">Carteira Total</div><div class="k-val" style="font-size:18px">R$ 68,4M</div></div>
+          <div class="kpi"><div class="k-label">Securitizado</div><div class="k-val" style="font-size:18px">R$ 24,2M</div></div>
+          <div class="kpi"><div class="k-label">Em Repasse</div><div class="k-val" style="font-size:18px">R$ 12,8M</div></div>
+        </div>
+        <div class="card card-p">
+          <div style="font-size:13px;font-weight:700;margin-bottom:14px">Distribuição da Carteira</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>Em aberto (adimplente)</span><span style="font-weight:700;color:var(--green)">R$ 46,2M (67%)</span></div><div class="pb"><div class="pf" style="width:67%;background:var(--green)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>Securitizado / CRI</span><span style="font-weight:700;color:var(--blue)">R$ 18,4M (27%)</span></div><div class="pb"><div class="pf" style="width:27%"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>Inadimplente</span><span style="font-weight:700;color:var(--red)">R$ 3,8M (6%)</span></div><div class="pb"><div class="pf" style="width:6%;background:var(--red)"></div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ FUNCIONÁRIOS ══ -->
+      <div class="page" id="page-funcionarios">
+        <div class="ph"><div><h1>Funcionários</h1><p>Gestão de pessoal e equipes</p></div><button class="btn btn-p" onclick="toast('Novo funcionário','👤')">+ Admitir</button></div>
+        <div class="grid4" style="margin-bottom:18px">
+          <div class="kpi"><div class="k-label">Total Ativos</div><div class="k-val">248</div></div>
+          <div class="kpi"><div class="k-label">Em Obra</div><div class="k-val" style="color:var(--blue)">196</div></div>
+          <div class="kpi"><div class="k-label">Administrativo</div><div class="k-val">52</div></div>
+          <div class="kpi"><div class="k-label">Admissões Jun</div><div class="k-val" style="color:var(--green)">8</div></div>
+        </div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Funcionários</h3><input class="tsearch" placeholder="🔍 Buscar funcionário..."></div>
+          <table>
+            <thead><tr><th>Nome</th><th>Cargo</th><th>Obra / Setor</th><th>Admissão</th><th>Salário</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Rafael Mendonça</strong></td><td>Eng. Civil</td><td>Palmeiras</td><td>03/2022</td><td>R$ 8.400</td><td><span class="tag tg">Ativo</span></td></tr>
+              <tr><td><strong>Patrícia Lemos</strong></td><td>Eng. Civil</td><td>Torres Azul</td><td>07/2021</td><td>R$ 8.400</td><td><span class="tag tg">Ativo</span></td></tr>
+              <tr><td><strong>José Andrade</strong></td><td>Mestre de Obras</td><td>Flores</td><td>01/2019</td><td>R$ 5.200</td><td><span class="tag tg">Ativo</span></td></tr>
+              <tr><td><strong>Ana Carvalho</strong></td><td>Pedreiro</td><td>Palmeiras</td><td>05/2023</td><td>R$ 2.800</td><td><span class="tag tg">Ativo</span></td></tr>
+              <tr><td><strong>Marcos Silva</strong></td><td>Armador</td><td>Torres Azul</td><td>02/2024</td><td>R$ 3.100</td><td><span class="tag ty">Afastado</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ PONTO ══ -->
+      <div class="page" id="page-ponto">
+        <div class="ph"><div><h1>Ponto Eletrônico</h1><p>Controle de jornada e horas extras</p></div>
+          <select class="fi" style="width:160px"><option>Junho 2026</option><option>Maio 2026</option></select>
+        </div>
+        <div class="grid4" style="margin-bottom:18px">
+          <div class="kpi"><div class="k-label">Presentes Hoje</div><div class="k-val" style="color:var(--green)">218</div></div>
+          <div class="kpi"><div class="k-label">Ausentes</div><div class="k-val" style="color:var(--red)">12</div></div>
+          <div class="kpi"><div class="k-label">H. Extras Jun</div><div class="k-val">1.240h</div></div>
+          <div class="kpi"><div class="k-label">H. Faltas Jun</div><div class="k-val" style="color:var(--orange)">84h</div></div>
+        </div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Registro de Ponto — Hoje (08/06/2026)</h3></div>
+          <table>
+            <thead><tr><th>Funcionário</th><th>Entrada</th><th>Saída Almoço</th><th>Retorno</th><th>Saída</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Rafael Mendonça</strong></td><td>07:58</td><td>12:02</td><td>13:01</td><td>—</td><td>—</td><td><span class="tag tg">Presente</span></td></tr>
+              <tr><td><strong>Patrícia Lemos</strong></td><td>08:05</td><td>12:00</td><td>13:00</td><td>—</td><td>—</td><td><span class="tag tg">Presente</span></td></tr>
+              <tr><td><strong>José Andrade</strong></td><td>06:52</td><td>11:58</td><td>13:02</td><td>—</td><td>—</td><td><span class="tag tg">Presente</span></td></tr>
+              <tr><td><strong>Marcos Silva</strong></td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class="tag ty">Afastado</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ FOLHA ══ -->
+      <div class="page" id="page-folha">
+        <div class="ph"><div><h1>Folha de Pagamento</h1><p>Processamento mensal e eSocial</p></div>
+          <div style="display:flex;gap:8px"><select class="fi" style="width:140px"><option>Junho 2026</option></select><button class="btn btn-p" onclick="toast('Folha processada!','💼')">Processar Folha</button></div>
+        </div>
+        <div class="grid4" style="margin-bottom:18px">
+          <div class="kpi"><div class="k-label">Total Bruto</div><div class="k-val" style="font-size:18px">R$ 621k</div></div>
+          <div class="kpi"><div class="k-label">Descontos</div><div class="k-val" style="font-size:18px;color:var(--red)">R$ 188k</div></div>
+          <div class="kpi"><div class="k-label">Total Líquido</div><div class="k-val" style="font-size:18px;color:var(--green)">R$ 433k</div></div>
+          <div class="kpi"><div class="k-label">Status</div><div class="k-val" style="font-size:14px"><span class="tag tg">Processada</span></div></div>
+        </div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Demonstrativo por Funcionário</h3><input class="tsearch" placeholder="🔍 Buscar..."></div>
+          <table>
+            <thead><tr><th>Funcionário</th><th>Salário Base</th><th>H.Extra</th><th>Desconto INSS</th><th>Desc. IR</th><th>Líquido</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Rafael Mendonça</strong></td><td>R$ 8.400</td><td>R$ 420</td><td>R$ 748</td><td>R$ 742</td><td><strong>R$ 7.330</strong></td></tr>
+              <tr><td><strong>Patrícia Lemos</strong></td><td>R$ 8.400</td><td>R$ 0</td><td>R$ 748</td><td>R$ 742</td><td><strong>R$ 6.910</strong></td></tr>
+              <tr><td><strong>José Andrade</strong></td><td>R$ 5.200</td><td>R$ 780</td><td>R$ 520</td><td>R$ 312</td><td><strong>R$ 5.148</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ CHECKLISTS ══ -->
+      <div class="page" id="page-checklists">
+        <div class="ph"><div><h1>Checklists de Qualidade</h1><p>Inspeções e auditorias de campo</p></div><button class="btn btn-p" onclick="toast('Novo checklist','✔️')">+ Novo Checklist</button></div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Checklists</h3><input class="tsearch" placeholder="🔍 Buscar..."></div>
+          <table>
+            <thead><tr><th>Checklist</th><th>Obra</th><th>Tipo</th><th>Resp.</th><th>Data</th><th>Conformes</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><strong>CHL-0241</strong></td><td>Palmeiras</td><td>Estrutura</td><td>Eng. Rafael</td><td>08/06</td><td>18/20 (90%)</td><td><span class="tag tg">Concluído</span></td></tr>
+              <tr><td><strong>CHL-0240</strong></td><td>Torres Azul</td><td>Fundações</td><td>Eng. Patrícia</td><td>07/06</td><td>12/12 (100%)</td><td><span class="tag tg">Concluído</span></td></tr>
+              <tr><td><strong>CHL-0239</strong></td><td>Flores</td><td>Alvenaria</td><td>Eng. José</td><td>06/06</td><td>14/18 (78%)</td><td><span class="tag ty">Com ressalvas</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ NÃO CONFORMIDADES ══ -->
+      <div class="page" id="page-ncs">
+        <div class="ph"><div><h1>Não Conformidades</h1><p>Registro, análise e ações corretivas</p></div><button class="btn btn-p" onclick="toast('Nova NC registrada','⚠️')">+ Registrar NC</button></div>
+        <div class="tcard">
+          <div class="ttoolbar"><h3>Não Conformidades</h3><input class="tsearch" placeholder="🔍 Buscar..."></div>
+          <table>
+            <thead><tr><th>NC #</th><th>Obra</th><th>Descrição</th><th>Gravidade</th><th>Prazo</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><strong>NC-047</strong></td><td>Flores</td><td>Infiltração no 3º pavimento</td><td><span class="tag tr">Alta</span></td><td>15/06</td><td><span class="tag to">Aberta</span></td><td><button class="btn btn-o btn-sm" onclick="toast('NC-047 aberta','⚠️')">Ver</button></td></tr>
+              <tr><td><strong>NC-046</strong></td><td>Torres Azul</td><td>Desalinhamento de alvenaria</td><td><span class="tag ty">Média</span></td><td>20/06</td><td><span class="tag tb2">Em andamento</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+              <tr><td><strong>NC-045</strong></td><td>Palmeiras</td><td>Acabamento fora do padrão</td><td><span class="tag tgr">Baixa</span></td><td>30/05</td><td><span class="tag tg">Encerrada</span></td><td><button class="btn btn-o btn-sm">Ver</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ RELATÓRIOS ══ -->
+      <div class="page" id="page-relatorios">
+        <div class="ph"><div><h1>Relatórios</h1><p>Relatórios gerenciais e exportações</p></div></div>
+        <div class="grid3">
+          <div class="card card-p" style="cursor:pointer" onclick="toast('Relatório gerado','📈')"><div style="font-size:24px;margin-bottom:10px">📊</div><div style="font-size:14px;font-weight:700;margin-bottom:6px">DRE por Obra</div><div style="font-size:12px;color:var(--gray-600)">Demonstrativo de resultado por empreendimento</div></div>
+          <div class="card card-p" style="cursor:pointer" onclick="toast('Relatório gerado','💰')"><div style="font-size:24px;margin-bottom:10px">💰</div><div style="font-size:14px;font-weight:700;margin-bottom:6px">Fluxo de Caixa</div><div style="font-size:12px;color:var(--gray-600)">Realizado e projetado com cenários</div></div>
+          <div class="card card-p" style="cursor:pointer" onclick="toast('Relatório gerado','📐')"><div style="font-size:24px;margin-bottom:10px">📐</div><div style="font-size:14px;font-weight:700;margin-bottom:6px">Curva S — Todas as Obras</div><div style="font-size:12px;color:var(--gray-600)">Avanço físico-financeiro consolidado</div></div>
+          <div class="card card-p" style="cursor:pointer" onclick="toast('Relatório gerado','📦')"><div style="font-size:24px;margin-bottom:10px">📦</div><div style="font-size:14px;font-weight:700;margin-bottom:6px">Estoque por Obra</div><div style="font-size:12px;color:var(--gray-600)">Saldo, movimentação e reposição</div></div>
+          <div class="card card-p" style="cursor:pointer" onclick="toast('Relatório gerado','👥')"><div style="font-size:24px;margin-bottom:10px">👥</div><div style="font-size:14px;font-weight:700;margin-bottom:6px">Folha de Pagamento</div><div style="font-size:12px;color:var(--gray-600)">Encargos, eSocial e RAIS</div></div>
+          <div class="card card-p" style="cursor:pointer" onclick="toast('Relatório gerado','🏢')"><div style="font-size:24px;margin-bottom:10px">🏢</div><div style="font-size:14px;font-weight:700;margin-bottom:6px">Carteira de Incorporação</div><div style="font-size:12px;color:var(--gray-600)">VGV, velocidade de vendas e inadimplência</div></div>
+        </div>
+      </div>
+
+    </main>
+  </div><!-- /body -->
+</div><!-- /shell -->
+
+<!-- ══ MODAL OC ══ -->
+<div class="modal-overlay" id="modalOC" onclick="if(event.target===this)closeModal('modalOC')">
+  <div class="modal">
+    <div class="modal-head"><h3>OC-2041 — Cimento CP II</h3><button class="modal-close" onclick="closeModal('modalOC')">×</button></div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div><div style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;margin-bottom:3px">Fornecedor</div><div style="font-size:13px;font-weight:700">Cimento Nacional Ltda</div></div>
+        <div><div style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;margin-bottom:3px">Obra</div><div style="font-size:13px;font-weight:700">Residencial Palmeiras</div></div>
+        <div><div style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;margin-bottom:3px">Valor Total</div><div style="font-size:18px;font-weight:900">R$ 78.960</div></div>
+        <div><div style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;margin-bottom:3px">Vencimento</div><div style="font-size:13px;font-weight:700">15/06/2026</div></div>
+      </div>
+      <table style="margin-bottom:16px"><thead><tr><th>Item</th><th>Qtd</th><th>Un</th><th>Preço Un.</th><th>Total</th></tr></thead>
+      <tbody><tr><td>Cimento CP II 50kg</td><td>2.400</td><td>sc</td><td>R$ 32,90</td><td>R$ 78.960</td></tr></tbody></table>
+      <div style="font-size:12px;font-weight:700;color:var(--gray-400);text-transform:uppercase;margin-bottom:8px">Comparativo</div>
+      <table><thead><tr><th>Fornecedor</th><th>Preço Un.</th><th>Total</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Cimento Nacional Ltda</td><td>R$ 32,90</td><td>R$ 78.960</td><td><span class="tag tg">Selecionado ✓</span></td></tr>
+        <tr><td>Depósito ABC</td><td>R$ 34,50</td><td>R$ 82.800</td><td></td></tr>
+        <tr><td>Material Max</td><td>R$ 33,80</td><td>R$ 81.120</td><td></td></tr>
+      </tbody></table>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-r btn-sm" onclick="toast('OC-2041 recusada','❌');closeModal('modalOC')">✕ Recusar</button>
+      <button class="btn btn-o" onclick="closeModal('modalOC')">Fechar</button>
+      <button class="btn btn-s" onclick="toast('OC-2041 autorizada!','✅');closeModal('modalOC')">✓ Autorizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL DIÁRIO ══ -->
+<div class="modal-overlay" id="modalDiario" onclick="if(event.target===this)closeModal('modalDiario')">
+  <div class="modal">
+    <div class="modal-head"><h3>Novo Registro — Diário de Obra</h3><button class="modal-close" onclick="closeModal('modalDiario')">×</button></div>
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="fg"><label>Obra *</label><select class="fi"><option>Residencial Palmeiras</option><option>Torres Azul</option></select></div>
+        <div class="fg"><label>Data *</label><input class="fi" type="date" value="2026-06-08"></div>
+        <div class="fg"><label>Clima</label><select class="fi"><option>☀️ Sol</option><option>⛅ Nublado</option><option>🌧️ Chuva</option></select></div>
+        <div class="fg"><label>Nº Operários</label><input class="fi" type="number" value="18"></div>
+      </div>
+      <div class="fg"><label>Atividades Realizadas *</label><textarea class="fi" style="height:80px;resize:vertical" placeholder="Descreva as atividades do dia..."></textarea></div>
+      <div class="fg"><label>Ocorrências</label><textarea class="fi" style="height:60px;resize:vertical" placeholder="Registre ocorrências, acidentes, visitas..."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-o" onclick="closeModal('modalDiario')">Cancelar</button>
+      <button class="btn btn-p" onclick="toast('Diário registrado com sucesso!','📓');closeModal('modalDiario')">Salvar Registro</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div class="toast" id="toastEl"><span id="toastIcon"></span><span id="toastMsg"></span></div>
+
+<script>
+function doLogin(){
+  document.getElementById('loginScreen').style.display='none';
+  const s=document.getElementById('shell');
+  s.classList.add('visible');
+}
+
+function go(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg=document.getElementById('page-'+id);
+  if(pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
+  });
+  document.querySelector('.main').scrollTo(0,0);
+}
+
+function toast(msg,icon){
+  const t=document.getElementById('toastEl');
+  document.getElementById('toastMsg').textContent=msg;
+  document.getElementById('toastIcon').textContent=(icon||'✅')+' ';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';}
+function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
+
+let aprovCount=3;
+function aprovItem(id,reject){
+  const c=document.getElementById('aprov-'+id);
+  if(c){c.style.opacity='.3';c.style.pointerEvents='none';}
+  aprovCount--;
+  const nb=document.querySelector('.nb:not(.b)');
+  if(nb) nb.textContent=aprovCount||'';
+  if(aprovCount===0) document.getElementById('aprovEmpty').style.display='block';
+  toast(reject?'OC-'+id+' recusada — equipe notificada':'OC-'+id+' autorizada! ERP atualizado.',reject?'❌':'✅');
+}
+
+function addSCRow(){
+  const tb=document.getElementById('scItens');
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input class="fi" style="width:170px" placeholder="Material"></td><td><select class="fi" style="width:70px"><option>un</option><option>sc</option><option>m³</option><option>kg</option><option>t</option></select></td><td><input class="fi" type="number" style="width:80px" value="1"></td><td><input class="fi" placeholder="—"></td><td><button onclick="this.closest('tr').remove()" style="color:var(--red);font-size:16px">✕</button></td>`;
+  tb.appendChild(tr);
+}
+
+document.querySelectorAll('.fb').forEach(b=>{
+  b.addEventListener('click',function(){this.closest('.filter-row').querySelectorAll('.fb').forEach(x=>x.classList.remove('on'));this.classList.add('on');});
+});
+</script>
+</body>
+</html>
