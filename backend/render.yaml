@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: sienge-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node backend-sienge.js
+    envVars:
+      - key: SIENGE_SUBDOMAIN
+        sync: false
+      - key: SIENGE_USER
+        sync: false
+      - key: SIENGE_PASSWORD
+        sync: false
+      - key: APP_TOKEN
+        sync: false
+      - key: PORT
+        value: 10000

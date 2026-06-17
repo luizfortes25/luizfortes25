@@ -1,0 +1,17 @@
+{
+  "name": "sienge-suprimentos",
+  "version": "1.0.0",
+  "description": "Sistema web de Suprimentos e Estoque integrado a API do Sienge (frontend + backend BFF)",
+  "main": "backend-sienge.js",
+  "scripts": {
+    "start": "node backend-sienge.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
+  }
+}
