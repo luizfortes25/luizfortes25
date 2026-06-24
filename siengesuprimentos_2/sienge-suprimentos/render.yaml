@@ -1,0 +1,23 @@
+# Blueprint do Render — deploy automatico do Sienge Suprimentos.
+# No Render: New + -> Blueprint -> selecione este repositorio.
+# O Render le este arquivo e configura tudo sozinho.
+# Voce so digita os valores marcados como "sync: false" (secretos) no painel.
+services:
+  - type: web
+    name: sienge-suprimentos
+    runtime: node
+    plan: free
+    rootDir: siengesuprimentos_2/sienge-suprimentos
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      # Subdominio da empresa (aparece na URL SUAEMPRESA.sienge.com.br)
+      - key: SIENGE_SUBDOMAIN
+        value: macedofortes
+      # Secretos — digite no painel do Render (nao ficam no repositorio):
+      - key: SIENGE_USER
+        sync: false
+      - key: SIENGE_PASSWORD
+        sync: false
+      - key: APP_TOKEN
+        sync: false
