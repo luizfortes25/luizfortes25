@@ -109,6 +109,22 @@ app.get(`${P}/purchase-orders/:id/totalization`, requireAppToken, async (req, re
   try { res.json(await sienge("GET", `/purchase-orders/${req.params.id}/totalization`)); } catch (e) { fail(res, e); }
 });
 
+// ---- DEBUG temporario: ver o JSON CRU do Sienge (remover depois) ----
+// Aceita o token pela URL (?token=...) para abrir direto no navegador.
+function debugAuth(req, res, next) {
+  const t = req.query.token || (req.headers.authorization || "").replace("Bearer ", "");
+  if (!APP_TOKEN || t === APP_TOKEN) return next();
+  return res.status(401).json({ error: "Token do app invalido" });
+}
+app.get(`${P}/_raw/*`, debugAuth, async (req, res) => {
+  try {
+    const resource = req.params[0];
+    const qs = new URLSearchParams(req.query); qs.delete("token");
+    const q = qs.toString();
+    res.json(await sienge("GET", `/${resource}${q ? "?" + q : ""}`));
+  } catch (e) { fail(res, e); }
+});
+
 // ============================================================
 //  PEDIDOS — escrita (autorizar / reprovar / anexo / avaliacao)
 // ============================================================
