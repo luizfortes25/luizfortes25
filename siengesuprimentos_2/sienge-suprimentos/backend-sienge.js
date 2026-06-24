@@ -89,12 +89,12 @@ app.get(`${P}/purchase-orders`, requireAppToken, async (req, res) => {
     const data = await sienge("GET", `/purchase-orders${qs ? "?" + qs : ""}`);
     const results = (data.results || data || []).map((o) => ({
       id: o.purchaseOrderId ?? o.id,
-      building: o.buildingName ?? o.building ?? "—",
-      supplier: o.supplierName ?? o.supplier ?? "—",
-      value: o.totalValue ?? o.value ?? 0,
+      building: o.buildingName ?? o.building ?? (o.buildingId != null ? `Obra ${o.buildingId}` : "—"),
+      supplier: o.supplierName ?? o.supplier ?? (o.supplierId != null ? `Forn. ${o.supplierId}` : "—"),
+      value: o.totalValue ?? o.value ?? o.totalAmount ?? 0,
       status: mapStatus(o.consistencyStatus ?? o.authorizationStatus ?? o.status),
       items: o.itemsCount ?? o.items ?? 0,
-      delivery: o.deliveryForecast ?? o.delivery ?? null,
+      delivery: o.deliveryForecast ?? o.delivery ?? o.date ?? null,
     }));
     res.json(results);
   } catch (e) { fail(res, e); }
