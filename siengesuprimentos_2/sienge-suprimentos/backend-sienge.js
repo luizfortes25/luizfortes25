@@ -26,8 +26,12 @@ const express = require("express");
 const cors = require("cors");
 
 const app = express();
+const path = require("path");
 app.use(cors());          // em producao, restrinja ao dominio do app
 app.use(express.json());
+// Serve o site (index.html) no mesmo endereco do backend.
+// Assim basta UMA hospedagem (ex.: Render) e voce abre tudo pela URL publica.
+app.use(express.static(__dirname));
 
 const { SIENGE_SUBDOMAIN, SIENGE_USER, SIENGE_PASSWORD, APP_TOKEN, PORT = 3001 } = process.env;
 
