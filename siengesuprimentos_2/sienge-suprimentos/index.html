@@ -177,8 +177,8 @@ function NewRequest(p){
   var bs=useState(""),building=bs[0],setBuilding=bs[1];
   var ds=useState(""),dept=ds[0],setDept=ds[1];
   var is=useState([]),items=is[0],setItems=is[1];
-  var dr=useState({name:"",qty:"",unit:"UN"}),draft=dr[0],setDraft=dr[1];
-  function addItem(){ if(!draft.name.trim())return; setItems(items.concat([assign({},draft,{qty:Number(draft.qty)||1})])); setDraft({name:"",qty:"",unit:"UN"}); }
+  var dr=useState({code:"",name:"",qty:"",unit:"UN"}),draft=dr[0],setDraft=dr[1];
+  function addItem(){ if(!String(draft.code).trim())return; setItems(items.concat([assign({},draft,{qty:Number(draft.qty)||1})])); setDraft({code:"",name:"",qty:"",unit:"UN"}); }
   function submit(){ if(!building.trim())return; p.onCreate({buildingId:building,departmentId:dept},items); setBuilding("");setDept("");setItems([]); }
   return h("div",{className:"fade",style:{maxWidth:760}},
     h(H,{title:"Nova Solicitacao de Compra",sub:"POST /purchase-requests + POST .../items. Entra no Sienge como nao autorizada, aguardando avaliacao interna."}),
@@ -187,14 +187,15 @@ function NewRequest(p){
         h(Field,{label:"Codigo da obra (buildingId)",hint:"Use o numero da obra como cadastrado no Sienge (ex.: 102)."}, h("input",{value:building,onChange:function(e){setBuilding(e.target.value);},placeholder:"ex.: 102",style:inp})),
         h(Field,{label:"Departamento (opcional)"}, h("input",{value:dept,onChange:function(e){setDept(e.target.value);},placeholder:"ex.: 5",style:inp}))),
       h("div",{style:{fontWeight:700,fontSize:15,margin:"8px 0 10px"}},"Insumos"),
-      h("div",{style:{display:"grid",gridTemplateColumns:"2fr 1fr 1fr auto",gap:8,alignItems:"end"}},
-        h(Field,{label:"Insumo"}, h("input",{value:draft.name,onChange:function(e){setDraft(assign({},draft,{name:e.target.value}));},placeholder:"Cimento CP-II 50kg",style:inp})),
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 2fr 1fr 1fr auto",gap:8,alignItems:"end"}},
+        h(Field,{label:"Cod. (productId)",hint:"Codigo do material no Sienge"}, h("input",{value:draft.code,onChange:function(e){setDraft(assign({},draft,{code:e.target.value}));},placeholder:"ex.: 2127",style:inp})),
+        h(Field,{label:"Descricao (opcional)"}, h("input",{value:draft.name,onChange:function(e){setDraft(assign({},draft,{name:e.target.value}));},placeholder:"Cimento CP-II 50kg",style:inp})),
         h(Field,{label:"Qtd."}, h("input",{value:draft.qty,onChange:function(e){setDraft(assign({},draft,{qty:e.target.value}));},placeholder:"100",style:inp})),
         h(Field,{label:"Unidade"}, h("select",{value:draft.unit,onChange:function(e){setDraft(assign({},draft,{unit:e.target.value}));},style:inp}, ["UN","KG","M","M2","M3","SC","L","CX"].map(function(u){return h("option",{key:u},u);}))),
         h("button",{className:"btn",onClick:addItem,style:{background:C.steel,color:"#fff",padding:"10px 14px",borderRadius:8,height:40}},"+ Add")),
       items.length>0 ? h("div",{style:{marginTop:14,border:"1px solid "+C.line,borderRadius:8,overflow:"hidden"}},
         items.map(function(it,i){return h("div",{key:i,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 13px",borderBottom:i<items.length-1?"1px solid "+C.line:"none",background:i%2?"#fafbfc":"#fff"}},
-          h("span",{style:{fontWeight:600}},it.name),
+          h("span",{style:{fontWeight:600}},h("span",{style:{fontFamily:M,color:C.orange}},"#"+it.code+" "),it.name||"(sem descricao)"),
           h("span",{style:{display:"flex",alignItems:"center",gap:12}},
             h("span",{style:{fontFamily:M,fontSize:13,color:C.muted}},it.qty+" "+it.unit),
             h("button",{className:"btn",onClick:function(){setItems(items.filter(function(_,x){return x!==i;}));},style:{background:"transparent",color:C.red,fontSize:18,padding:0}},"×")));})) : null,
@@ -453,10 +454,11 @@ function App(){
   }
   function createRequest(payload,items){
     if(!live){ var fake=assign({id:Math.floor(8000+Math.random()*999)},payload,{items:items,status:"PENDING"}); setRequests(function(p){return [fake].concat(p);}); log("(demo) POST /purchase-requests"); if(items.length)log("(demo) POST /purchase-requests/"+fake.id+"/items ("+items.length+")"); notify("Solicitacao criada (demo) #"+fake.id); return; }
-    // monta corpo compativel com a API do Sienge (buildingId numerico, itens estruturados)
-    var bodyReq = { buildingId: Number(payload.buildingId) };
-    if(payload.departmentId) bodyReq.departmentId = Number(payload.departmentId);
-    var bodyItems = items.map(function(it){ return { resourceDescription: it.name, quantity: Number(it.qty)||1, unitOfMeasure: it.unit }; });
+    // monta corpo compativel com a API do Sienge (nomes de campo reais: buildingId, requestDate, productId, departamentId)
+    var hoje = new Date().toISOString().slice(0,10);
+    var bodyReq = { buildingId: Number(payload.buildingId), requestDate: hoje };
+    if(payload.departmentId) bodyReq.departamentId = Number(payload.departmentId);
+    var bodyItems = items.map(function(it){ var o={ productId: Number(it.code), quantity: Number(it.qty)||1 }; if(it.name) o.notes=it.name; return o; });
     api("POST","/purchase-requests",bodyReq).then(function(created){
       var rid = created && (created.purchaseRequestId || created.id);
       if(!rid){ notify("Solicitacao enviada, mas o backend nao retornou o ID"); return; }
