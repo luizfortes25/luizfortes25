@@ -260,10 +260,15 @@ function Endpoints(){
 function Stock(p){
   var ss=useState("inventory"),sub=ss[0],setSub=ss[1];
   var fs=useState(""),filter=fs[0],setFilter=fs[1];
+  var ccs=useState(""),scc=ccs[0],setScc=ccs[1];
   var stock=p.stock, movements=p.movements;
   var fStock=stock.filter(function(it){return (it.resource+it.brand+it.cc).toLowerCase().indexOf(filter.toLowerCase())!==-1;});
 
   var inventoryView = h("div",null,
+    p.live?h("div",{style:{display:"flex",gap:8,alignItems:"flex-end",marginBottom:12,flexWrap:"wrap"}},
+      h("div",{style:{flex:"1 1 240px"}}, h(Field,{label:"Centro de custo (costCenterId)",hint:"Almoxarifado / centro de custo no Sienge (ex.: 3)"}, h("input",{value:scc,onChange:function(e){setScc(e.target.value);},placeholder:"ex.: 3",style:inp}))),
+      h("button",{className:"btn",onClick:function(){p.onLoadStock(scc);},style:{background:scc.trim()?C.orange:C.line,color:"#fff",padding:"10px 16px",borderRadius:8,height:40,display:"inline-flex",alignItems:"center",gap:8,cursor:scc.trim()?"pointer":"not-allowed"}},
+        p.loading?h("span",{style:{width:12,height:12,border:"2px solid rgba(255,255,255,.5)",borderTopColor:"#fff",borderRadius:12,animation:"spin .7s linear infinite",display:"inline-block"}}):null,"Carregar")):null,
     h("input",{value:filter,onChange:function(e){setFilter(e.target.value);},placeholder:"Filtrar insumo, marca ou centro de custo...",style:assign({},inp,{marginBottom:12})}),
     h("div",{style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,overflow:"hidden"}},
       h("div",{style:{overflowX:"auto"}},
@@ -484,6 +489,15 @@ function App(){
   }
   function testConnection(){ if(!cfg.baseUrl.trim()){notify("Informe a URL do backend");return;} setConnected(true); notify("Modo conectado ativado"); }
 
+  function loadStock(cc){
+    if(!live){ setStock(DEMO_STOCK); return; }
+    if(!String(cc).trim()){ notify("Informe o centro de custo (costCenterId)"); return; }
+    setLoading(true);
+    api("GET","/stock-inventories/"+encodeURIComponent(String(cc).trim())+"/items").then(function(data){
+      var list=Array.isArray(data)?data:((data&&data.results)||[]);
+      setStock(list); notify(list.length+" itens em estoque carregados");
+    }).catch(function(e){ notify("Falha ao carregar estoque: "+e.message); }).then(function(){ setLoading(false); });
+  }
   function createMovement(mv){
     var entry={ id:"MV-"+Math.floor(3000+Math.random()*9999), type:mv.type, resource:mv.resource, qty:mv.quantity, unit:mv.unit, cc:mv.costCenterId, date:new Date().toISOString().slice(0,10) };
     if(!live){ setMovements(function(p){return [entry].concat(p);}); log("(demo) POST /stock-movements ("+(mv.type==="IN"?"entrada":"saida")+")"); notify("Movimento registrado (demo) "+entry.id); return; }
@@ -595,7 +609,7 @@ function App(){
   var content;
   if(tab==="orders") content=ordersView;
   else if(tab==="new") content=h(NewRequest,{onCreate:createRequest,requests:requests,live:live});
-  else if(tab==="stock") content=h(Stock,{stock:stock,movements:movements,onMovement:createMovement,live:live});
+  else if(tab==="stock") content=h(Stock,{stock:stock,movements:movements,onMovement:createMovement,onLoadStock:loadStock,loading:loading,live:live});
   else if(tab==="nfes") content=h(NFes,{nfes:nfes,onReload:loadNfes,live:live});
   else if(tab==="flow") content=h(Flow,null);
   else if(tab==="endpoints") content=h(Endpoints,null);
