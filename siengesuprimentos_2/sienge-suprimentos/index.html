@@ -462,7 +462,7 @@ function App(){
     var hoje = new Date().toISOString().slice(0,10);
     var bodyReq = { buildingId: Number(payload.buildingId), requestDate: hoje };
     if(payload.requesterUser){ bodyReq.createdBy = payload.requesterUser; }
-    if(payload.departmentId) bodyReq.departamentId = Number(payload.departmentId);
+    bodyReq.departamentId = payload.departmentId ? Number(payload.departmentId) : null;
     var bodyItems = items.map(function(it){ var o={ productId: Number(it.code), quantity: Number(it.qty)||1 }; if(it.name) o.notes=it.name; return o; });
     api("POST","/purchase-requests",bodyReq).then(function(created){
       var rid = created && (created.purchaseRequestId || created.id);
