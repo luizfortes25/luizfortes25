@@ -92,7 +92,9 @@ app.get(`${P}/purchase-orders`, requireAppToken, async (req, res) => {
       building: o.buildingName ?? o.building ?? (o.buildingId != null ? `Obra ${o.buildingId}` : "—"),
       supplier: o.supplierName ?? o.supplier ?? (o.supplierId != null ? `Forn. ${o.supplierId}` : "—"),
       value: o.totalValue ?? o.value ?? o.totalAmount ?? 0,
-      status: mapStatus(o.consistencyStatus ?? o.authorizationStatus ?? o.status),
+      status: (o.authorized === true || o.authorizedAt) ? "AUTHORIZED"
+              : (o.disapproved === true) ? "DISAPPROVED"
+              : mapStatus(o.consistencyStatus ?? o.authorizationStatus ?? o.status),
       items: o.itemsCount ?? o.items ?? 0,
       delivery: o.deliveryForecast ?? o.delivery ?? o.date ?? null,
     }));
