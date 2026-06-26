@@ -377,6 +377,7 @@ function App(){
   var cs=useState({baseUrl:"",token:""}),cfg=cs[0],setCfg=cs[1];
   var cn=useState(false),connected=cn[0],setConnected=cn[1];
   var os=useState(DEMO_ORDERS),orders=os[0],setOrders=os[1];
+  var exp=useState({}),expanded=exp[0],setExpanded=exp[1];
   var rs=useState([]),requests=rs[0],setRequests=rs[1];
   var stk=useState(DEMO_STOCK),stock=stk[0],setStock=stk[1];
   var mvs=useState(DEMO_MOVEMENTS),movements=mvs[0],setMovements=mvs[1];
@@ -480,6 +481,38 @@ function App(){
     api("POST","/stock-movements",{type:mv.type,costCenterId:mv.costCenterId,items:[{resourceId:mv.resource,quantity:mv.quantity,unit:mv.unit}]}).then(function(){ setMovements(function(p){return [entry].concat(p);}); notify("Movimento "+entry.id+" criado no Sienge"); }).catch(function(e){notify("Erro: "+e.message);});
   }
 
+  function toggleItems(o){
+    var id=o.id, cur=expanded[id]||{};
+    if(cur.open){ setExpanded(function(p){var n=assign({},p);n[id]=assign({},p[id],{open:false});return n;}); return; }
+    if(cur.items || !live){ setExpanded(function(p){var n=assign({},p);n[id]=assign({},p[id]||{},{open:true});return n;}); return; }
+    setExpanded(function(p){var n=assign({},p);n[id]=assign({},p[id]||{},{open:true,loading:true,error:null});return n;});
+    api("GET","/purchase-orders/"+id+"/items").then(function(data){
+      var list=Array.isArray(data)?data:((data&&data.results)||[]);
+      setExpanded(function(p){var n=assign({},p);n[id]=assign({},p[id]||{},{open:true,loading:false,items:list});return n;});
+    }).catch(function(e){
+      setExpanded(function(p){var n=assign({},p);n[id]=assign({},p[id]||{},{open:true,loading:false,error:e.message});return n;});
+    });
+  }
+  function renderItemsBlock(ex){
+    if(!live) return h("div",{style:{padding:"10px 2px",color:C.muted,fontSize:13}},"Conecte ao Sienge para ver os materiais.");
+    if(ex.loading) return h("div",{style:{padding:"10px 2px",color:C.muted,fontSize:13}},"Carregando materiais...");
+    if(ex.error) return h("div",{style:{padding:"10px 2px",color:C.red,fontSize:13}},"Erro ao carregar materiais: "+ex.error);
+    var items=ex.items||[];
+    if(items.length===0) return h("div",{style:{padding:"10px 2px",color:C.muted,fontSize:13}},"Nenhum material neste pedido.");
+    return h("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:13,background:"#fff",border:"1px solid "+C.line,borderRadius:8}},
+      h("thead",null,h("tr",{style:{background:"#eef2f6",textAlign:"left"}},
+        ["Material","Marca","Qtd","Un","Preco un.","Total"].map(function(hh){return h("th",{key:hh,style:{padding:"7px 10px",fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.3}},hh);}))),
+      h("tbody",null, items.map(function(it,i){
+        return h("tr",{key:i,style:{borderTop:"1px solid "+C.line}},
+          h("td",{style:{padding:"7px 10px",fontWeight:600}},it.resource),
+          h("td",{style:{padding:"7px 10px",color:C.muted}},it.brand),
+          h("td",{style:{padding:"7px 10px",fontFamily:M,whiteSpace:"nowrap"}},it.qty),
+          h("td",{style:{padding:"7px 10px"}},it.unit),
+          h("td",{style:{padding:"7px 10px",fontFamily:M,whiteSpace:"nowrap"}},brl(it.unitPrice)),
+          h("td",{style:{padding:"7px 10px",fontFamily:M,fontWeight:600,whiteSpace:"nowrap"}},brl(it.total)));
+      })));
+  }
+
   var counts = useMemo(function(){ var c={PENDING:0,QUOTING:0,AUTHORIZED:0,total:0}; orders.forEach(function(o){ c.total+=o.value||0; if(c[o.status]!=null)c[o.status]++; }); return c; },[orders]);
   var NAV=[["orders","Pedidos"],["new","Nova Solicitacao"],["stock","Estoque"],["nfes","Notas Fiscais"],["flow","Fluxo"],["endpoints","Endpoints"],["connect","Conexao"]];
 
@@ -501,24 +534,31 @@ function App(){
           h("tbody",null,
             orders.map(function(o){
               var s=STATUS[o.status]||STATUS.QUOTING;
-              return h("tr",{key:o.id,className:"rowh",style:{borderBottom:"1px solid "+C.line}},
-                h("td",{style:{padding:"11px 14px",fontFamily:M,fontWeight:600,color:C.steel}},"#"+o.id),
-                h("td",{style:{padding:"11px 14px",fontWeight:600}},o.building),
-                h("td",{style:{padding:"11px 14px",color:C.muted}},o.supplier),
-                h("td",{style:{padding:"11px 14px",textAlign:"center"}},o.items),
-                h("td",{style:{padding:"11px 14px",fontFamily:M,fontSize:13}},fmtDate(o.delivery)),
-                h("td",{style:{padding:"11px 14px",fontFamily:M,fontWeight:600,whiteSpace:"nowrap"}},brl(o.value)),
-                h("td",{style:{padding:"11px 14px"}},
-                  h("span",{style:{display:"inline-flex",alignItems:"center",gap:6,padding:"3px 9px",borderRadius:6,background:s.bg,color:s.fg,fontWeight:600,fontSize:12,whiteSpace:"nowrap"}},
-                    h("span",{style:{width:6,height:6,borderRadius:6,background:s.dot}}),s.label)),
-                h("td",{style:{padding:"9px 14px",whiteSpace:"nowrap"}},
-                  h("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
-                    o.status==="PENDING"?h(Fragment,null,
-                      h("button",{className:"btn",onClick:function(){doAuthorize(o.id);},style:mini(C.green,"#fff")},"Autorizar"),
-                      h("button",{className:"btn",onClick:function(){doDisapprove(o.id);},style:mini("#fff",C.red,C.red)},"Reprovar")):null,
-                    h("button",{className:"btn",onClick:function(){setModal({type:"note",order:o});},style:mini("#fff",C.steel,C.line)},"+ Obs."),
-                    h("button",{className:"btn",onClick:function(){setModal({type:"attach",order:o});},style:mini("#fff",C.steel,C.line)},"Anexo"),
-                    h("button",{className:"btn",onClick:function(){setModal({type:"eval",order:o});},style:mini("#fff",C.steel,C.line)},"Avaliar"))));
+              var exo=expanded[o.id]||{};
+              return h(Fragment,{key:o.id},
+                h("tr",{className:"rowh",style:{borderBottom:exo.open?"none":"1px solid "+C.line}},
+                  h("td",{style:{padding:"11px 14px",fontFamily:M,fontWeight:600,color:C.steel}},"#"+o.id),
+                  h("td",{style:{padding:"11px 14px",fontWeight:600}},o.building),
+                  h("td",{style:{padding:"11px 14px",color:C.muted}},o.supplier),
+                  h("td",{style:{padding:"8px 14px",textAlign:"center"}},
+                    h("button",{className:"btn",onClick:function(){toggleItems(o);},style:{background:"transparent",color:C.orange,fontWeight:600,fontSize:12.5,textDecoration:"underline",whiteSpace:"nowrap",padding:0}},exo.open?"ocultar":"ver materiais")),
+                  h("td",{style:{padding:"11px 14px",fontFamily:M,fontSize:13}},fmtDate(o.delivery)),
+                  h("td",{style:{padding:"11px 14px",fontFamily:M,fontWeight:600,whiteSpace:"nowrap"}},brl(o.value)),
+                  h("td",{style:{padding:"11px 14px"}},
+                    h("span",{style:{display:"inline-flex",alignItems:"center",gap:6,padding:"3px 9px",borderRadius:6,background:s.bg,color:s.fg,fontWeight:600,fontSize:12,whiteSpace:"nowrap"}},
+                      h("span",{style:{width:6,height:6,borderRadius:6,background:s.dot}}),s.label)),
+                  h("td",{style:{padding:"9px 14px",whiteSpace:"nowrap"}},
+                    h("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
+                      o.status==="PENDING"?h(Fragment,null,
+                        h("button",{className:"btn",onClick:function(){doAuthorize(o.id);},style:mini(C.green,"#fff")},"Autorizar"),
+                        h("button",{className:"btn",onClick:function(){doDisapprove(o.id);},style:mini("#fff",C.red,C.red)},"Reprovar")):null,
+                      h("button",{className:"btn",onClick:function(){setModal({type:"note",order:o});},style:mini("#fff",C.steel,C.line)},"+ Obs."),
+                      h("button",{className:"btn",onClick:function(){setModal({type:"attach",order:o});},style:mini("#fff",C.steel,C.line)},"Anexo"),
+                      h("button",{className:"btn",onClick:function(){setModal({type:"eval",order:o});},style:mini("#fff",C.steel,C.line)},"Avaliar")))),
+                exo.open?h("tr",null,h("td",{colSpan:8,style:{padding:"0 14px 14px 14px",background:"#fafbfc",borderBottom:"1px solid "+C.line}},
+                  h("div",{style:{paddingTop:4}},
+                    h("div",{style:{fontSize:11,fontWeight:700,color:C.muted,margin:"4px 0 6px",textTransform:"uppercase",letterSpacing:0.3}},"Materiais do pedido #"+o.id),
+                    renderItemsBlock(exo)))):null);
             }),
             orders.length===0?h("tr",null,h("td",{colSpan:8,style:{padding:30,textAlign:"center",color:C.muted}},"Nenhum pedido.")):null)))));
 

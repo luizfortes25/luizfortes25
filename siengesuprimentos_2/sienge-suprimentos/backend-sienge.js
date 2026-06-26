@@ -103,7 +103,23 @@ app.get(`${P}/purchase-orders/:id`, requireAppToken, async (req, res) => {
   try { res.json(await sienge("GET", `/purchase-orders/${req.params.id}`)); } catch (e) { fail(res, e); }
 });
 app.get(`${P}/purchase-orders/:id/items`, requireAppToken, async (req, res) => {
-  try { res.json(await sienge("GET", `/purchase-orders/${req.params.id}/items`)); } catch (e) { fail(res, e); }
+  try {
+    const data = await sienge("GET", `/purchase-orders/${req.params.id}/items`);
+    const results = (data.results || data || []).map((it) => {
+      const qty = it.quantity ?? 0;
+      const unitPrice = it.netPrice ?? it.unitPrice ?? 0;
+      return {
+        n: it.itemNumber ?? null,
+        resource: it.resourceDescription ?? it.resource ?? "—",
+        brand: it.trademarkDescription || "—",
+        qty: qty,
+        unit: it.unitOfMeasure ?? "UN",
+        unitPrice: unitPrice,
+        total: it.totalPrice ?? (qty * unitPrice),
+      };
+    });
+    res.json(results);
+  } catch (e) { fail(res, e); }
 });
 app.get(`${P}/purchase-orders/:id/totalization`, requireAppToken, async (req, res) => {
   try { res.json(await sienge("GET", `/purchase-orders/${req.params.id}/totalization`)); } catch (e) { fail(res, e); }
