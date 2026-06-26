@@ -180,7 +180,8 @@ function NewRequest(p){
   var is=useState([]),items=is[0],setItems=is[1];
   var dr=useState({code:"",name:"",qty:"",unit:"UN"}),draft=dr[0],setDraft=dr[1];
   function addItem(){ if(!String(draft.code).trim())return; setItems(items.concat([assign({},draft,{qty:Number(draft.qty)||1})])); setDraft({code:"",name:"",qty:"",unit:"UN"}); }
-  function submit(){ if(!building.trim())return; p.onCreate({buildingId:building,departmentId:dept,requesterUser:requester.trim()},items); setBuilding("");setDept("");setItems([]); }
+  function submit(){ if(!building.trim()||!requester.trim())return; p.onCreate({buildingId:building,departmentId:dept,requesterUser:requester.trim()},items); setBuilding("");setDept("");setItems([]); }
+  var canSubmit = building.trim() && requester.trim();
   return h("div",{className:"fade",style:{maxWidth:760}},
     h(H,{title:"Nova Solicitacao de Compra",sub:"POST /purchase-requests + POST .../items. Entra no Sienge como nao autorizada, aguardando avaliacao interna."}),
     h("div",{style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,padding:20,marginTop:16}},
@@ -201,7 +202,7 @@ function NewRequest(p){
           h("span",{style:{display:"flex",alignItems:"center",gap:12}},
             h("span",{style:{fontFamily:M,fontSize:13,color:C.muted}},it.qty+" "+it.unit),
             h("button",{className:"btn",onClick:function(){setItems(items.filter(function(_,x){return x!==i;}));},style:{background:"transparent",color:C.red,fontSize:18,padding:0}},"×")));})) : null,
-      h("button",{className:"btn",onClick:submit,disabled:!building.trim(),style:{marginTop:18,width:"100%",background:building.trim()?C.orange:C.line,color:"#fff",padding:"12px",borderRadius:8,fontSize:15,cursor:building.trim()?"pointer":"not-allowed"}},"Enviar solicitacao "+(p.live?"ao Sienge":"(demo)"))),
+      h("button",{className:"btn",onClick:submit,disabled:!canSubmit,style:{marginTop:18,width:"100%",background:canSubmit?C.orange:C.line,color:"#fff",padding:"12px",borderRadius:8,fontSize:15,cursor:canSubmit?"pointer":"not-allowed"}},"Enviar solicitacao "+(p.live?"ao Sienge":"(demo)"))),
     p.requests.length>0 ? h("div",{style:{marginTop:22}},
       h("div",{style:{fontWeight:700,fontSize:15,marginBottom:10}},"Solicitacoes criadas nesta sessao"),
       p.requests.map(function(r){return h("div",{key:r.id,style:{background:C.panel,border:"1px solid "+C.line,borderRadius:9,padding:"12px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}},
@@ -460,7 +461,7 @@ function App(){
     // monta corpo compativel com a API do Sienge (nomes de campo reais: buildingId, requestDate, productId, departamentId)
     var hoje = new Date().toISOString().slice(0,10);
     var bodyReq = { buildingId: Number(payload.buildingId), requestDate: hoje };
-    if(payload.requesterUser) bodyReq.requesterUser = payload.requesterUser;
+    if(payload.requesterUser){ bodyReq.createdBy = payload.requesterUser; bodyReq.requesterUser = payload.requesterUser; }
     if(payload.departmentId) bodyReq.departamentId = Number(payload.departmentId);
     var bodyItems = items.map(function(it){ var o={ productId: Number(it.code), quantity: Number(it.qty)||1 }; if(it.name) o.notes=it.name; return o; });
     api("POST","/purchase-requests",bodyReq).then(function(created){
