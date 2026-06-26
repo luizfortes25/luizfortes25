@@ -143,6 +143,27 @@ app.get(`${P}/_raw/*`, debugAuth, async (req, res) => {
   } catch (e) { fail(res, e); }
 });
 
+// ---- PDF de analise do pedido (binario) ----
+// Aceita token via ?token=... para abrir direto numa aba do navegador.
+app.get(`${P}/purchase-orders/:id/analysis/pdf`, debugAuth, async (req, res) => {
+  try {
+    if (!withinRateLimit()) return res.status(429).json({ error: "Rate limit local (180/min)" });
+    const r = await fetch(`${SIENGE_BASE}/purchase-orders/${req.params.id}/analysis/pdf`, {
+      headers: { Authorization: SIENGE_AUTH, Accept: "application/pdf" },
+    });
+    if (!r.ok) {
+      const t = await r.text();
+      return res.status(r.status).json({ error: `Sienge ${r.status}`, detail: t.slice(0, 400) });
+    }
+    const ct = r.headers.get("content-type") || "";
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (ct.includes("application/json")) { res.setHeader("Content-Type", "application/json"); return res.send(buf); }
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="pedido-${req.params.id}.pdf"`);
+    res.send(buf);
+  } catch (e) { fail(res, e); }
+});
+
 // ============================================================
 //  PEDIDOS — escrita (autorizar / reprovar / anexo / avaliacao)
 // ============================================================
