@@ -461,7 +461,7 @@ function App(){
     // monta corpo compativel com a API do Sienge (nomes de campo reais: buildingId, requestDate, productId, departamentId)
     var hoje = new Date().toISOString().slice(0,10);
     var bodyReq = { buildingId: Number(payload.buildingId), requestDate: hoje };
-    if(payload.requesterUser){ bodyReq.createdBy = payload.requesterUser; bodyReq.requesterUser = payload.requesterUser; }
+    if(payload.requesterUser){ bodyReq.createdBy = payload.requesterUser; }
     if(payload.departmentId) bodyReq.departamentId = Number(payload.departmentId);
     var bodyItems = items.map(function(it){ var o={ productId: Number(it.code), quantity: Number(it.qty)||1 }; if(it.name) o.notes=it.name; return o; });
     api("POST","/purchase-requests",bodyReq).then(function(created){
