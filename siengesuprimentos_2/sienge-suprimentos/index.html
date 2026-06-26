@@ -401,8 +401,10 @@ function App(){
           var data=null; try{ data=txt?JSON.parse(txt):null; }catch(e){ data=txt; }
           if(!res.ok){
             var detail=(data&&(data.error||data.message))||(typeof data==="string"&&data)||res.statusText;
-            log("   erro: "+String(detail).slice(0,120));
-            var err=new Error("HTTP "+res.status+" — "+String(detail).slice(0,80));
+            var dd=data&&data.detail;
+            if(dd){ var dm=dd.developerMessage||dd.clientMessage||dd.message||(dd.errors&&JSON.stringify(dd.errors))||(typeof dd==="string"?dd:JSON.stringify(dd)); if(dm) detail=detail+" — "+String(dm); }
+            log("   erro: "+String(detail).slice(0,200));
+            var err=new Error("HTTP "+res.status+" — "+String(detail).slice(0,180));
             err.status=res.status; throw err;
           }
           return data;

@@ -181,9 +181,22 @@ app.get(`${P}/purchase-requests/all/items`, requireAppToken, async (req, res) =>
 app.get(`${P}/purchase-requests/:id`, requireAppToken, async (req, res) => {
   try { res.json(await sienge("GET", `/purchase-requests/${req.params.id}`)); } catch (e) { fail(res, e); }
 });
-// Criar solicitacao
+// Criar solicitacao (le o ID no corpo OU no cabecalho Location)
 app.post(`${P}/purchase-requests`, requireAppToken, async (req, res) => {
-  try { res.json(await sienge("POST", `/purchase-requests`, req.body)); } catch (e) { fail(res, e); }
+  try {
+    if (!withinRateLimit()) return res.status(429).json({ error: "Rate limit local (180/min)" });
+    const resp = await fetch(`${SIENGE_BASE}/purchase-requests`, {
+      method: "POST",
+      headers: { Authorization: SIENGE_AUTH, "Content-Type": "application/json" },
+      body: JSON.stringify(req.body),
+    });
+    const text = await resp.text();
+    let data = null; try { data = text ? JSON.parse(text) : null; } catch (_) { data = text; }
+    if (!resp.ok) return res.status(resp.status).json({ error: `Sienge ${resp.status}`, detail: data });
+    let id = data && (data.purchaseRequestId ?? data.id);
+    if (!id) { const m = (resp.headers.get("location") || "").match(/(\d+)\/?$/); if (m) id = Number(m[1]); }
+    res.json({ purchaseRequestId: id ?? null, raw: data });
+  } catch (e) { fail(res, e); }
 });
 // Adicionar itens
 app.post(`${P}/purchase-requests/:id/items`, requireAppToken, async (req, res) => {
