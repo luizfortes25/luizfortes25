@@ -66,3 +66,13 @@ Tem duas partes:
 ## Endpoints cobertos
 
 O backend expõe rotas para Solicitações, Pedidos e Estoque — tudo que a API do Sienge libera nesses módulos. Veja a aba **Endpoints** do site para a lista completa (39 endpoints).
+
+---
+
+## Regras fixas do projeto (instruções gravadas)
+
+Parâmetros sempre enviados na **criação de Solicitação de Compra** (`POST /purchase-requests`):
+
+- **`categoryId` = 1** (categoria fixa, definida pela empresa).
+
+> O solicitante (`createdBy` / `requesterUser`) deve ser um **login de usuário válido cadastrado no Sienge**.
