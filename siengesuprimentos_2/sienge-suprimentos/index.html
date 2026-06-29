@@ -176,7 +176,7 @@ function Modal(p){
 function NewRequest(p){
   var bs=useState(""),building=bs[0],setBuilding=bs[1];
   var ds=useState(""),dept=ds[0],setDept=ds[1];
-  var rqs=useState(""),requester=rqs[0],setRequester=rqs[1];
+  var rqs=useState("MF"),requester=rqs[0],setRequester=rqs[1];
   var dts=useState(new Date().toISOString().slice(0,10)),reqDate=dts[0],setReqDate=dts[1];
   var is=useState([]),items=is[0],setItems=is[1];
   var dr=useState({code:"",name:"",qty:"",unit:"UN"}),draft=dr[0],setDraft=dr[1];
@@ -467,19 +467,23 @@ function App(){
     if(!live){ var fake=assign({id:Math.floor(8000+Math.random()*999)},payload,{items:items,status:"PENDING"}); setRequests(function(p){return [fake].concat(p);}); log("(demo) POST /purchase-requests"); if(items.length)log("(demo) POST /purchase-requests/"+fake.id+"/items ("+items.length+")"); notify("Solicitacao criada (demo) #"+fake.id); return; }
     // corpo completo, conforme o modelo real de uma solicitacao no Sienge (ver solicitacao #19)
     var hoje = new Date().toISOString().slice(0,10);
+    // Parametros fixos definidos pelo usuario:
+    var FIXO = { categoryId: 1, createdBy: "MF", requesterUser: "MF" };
     var bodyReq = {
       buildingId: Number(payload.buildingId),
       requestDate: payload.requestDate || hoje,
       departamentId: payload.departmentId ? Number(payload.departmentId) : null,
+      categoryId: FIXO.categoryId,
+      createdBy: payload.requesterUser || FIXO.createdBy,
+      requesterUser: payload.requesterUser || FIXO.requesterUser,
       notes: payload.notes || ""
     };
-    if(payload.requesterUser){ bodyReq.createdBy = payload.requesterUser; bodyReq.requesterUser = payload.requesterUser; }
     var bodyItems = items.map(function(it){ var o={ productId: Number(it.code), quantity: Number(it.qty)||1 }; if(it.name) o.notes=it.name; return o; });
     api("POST","/purchase-requests",bodyReq).then(function(created){
       var rid = created && (created.purchaseRequestId || created.id);
       if(!rid){ notify("Solicitacao enviada, mas o backend nao retornou o ID"); return; }
       if(!items.length){ setRequests(function(p){return [assign({id:rid},payload,{items:items,status:"PENDING"})].concat(p);}); notify("Solicitacao #"+rid+" criada no Sienge"); return; }
-      return api("POST","/purchase-requests/"+rid+"/items",{ items: bodyItems }).then(function(){
+      return api("POST","/purchase-requests/"+rid+"/items",bodyItems).then(function(){
         setRequests(function(p){return [assign({id:rid},payload,{items:items,status:"PENDING"})].concat(p);});
         notify("Solicitacao #"+rid+" criada com "+items.length+" itens");
       });
