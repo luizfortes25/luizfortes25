@@ -471,9 +471,7 @@ function App(){
       buildingId: Number(payload.buildingId),
       requestDate: payload.requestDate || hoje,
       departamentId: payload.departmentId ? Number(payload.departmentId) : null,
-      notes: payload.notes || "",
-      draft: false,
-      purchaseProcessCarriedOutByBuildingFlag: false
+      notes: payload.notes || ""
     };
     if(payload.requesterUser){ bodyReq.createdBy = payload.requesterUser; bodyReq.requesterUser = payload.requesterUser; }
     var bodyItems = items.map(function(it){ var o={ productId: Number(it.code), quantity: Number(it.qty)||1 }; if(it.name) o.notes=it.name; return o; });
