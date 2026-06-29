@@ -177,16 +177,18 @@ function NewRequest(p){
   var bs=useState(""),building=bs[0],setBuilding=bs[1];
   var ds=useState(""),dept=ds[0],setDept=ds[1];
   var rqs=useState(""),requester=rqs[0],setRequester=rqs[1];
+  var dts=useState(new Date().toISOString().slice(0,10)),reqDate=dts[0],setReqDate=dts[1];
   var is=useState([]),items=is[0],setItems=is[1];
   var dr=useState({code:"",name:"",qty:"",unit:"UN"}),draft=dr[0],setDraft=dr[1];
   function addItem(){ if(!String(draft.code).trim())return; setItems(items.concat([assign({},draft,{qty:Number(draft.qty)||1})])); setDraft({code:"",name:"",qty:"",unit:"UN"}); }
-  function submit(){ if(!building.trim()||!requester.trim())return; p.onCreate({buildingId:building,departmentId:dept,requesterUser:requester.trim()},items); setBuilding("");setDept("");setItems([]); }
-  var canSubmit = building.trim() && requester.trim();
+  function submit(){ if(!building.trim()||!requester.trim()||!reqDate)return; p.onCreate({buildingId:building,departmentId:dept,requesterUser:requester.trim(),requestDate:reqDate},items); setBuilding("");setDept("");setItems([]); }
+  var canSubmit = building.trim() && requester.trim() && reqDate;
   return h("div",{className:"fade",style:{maxWidth:760}},
     h(H,{title:"Nova Solicitacao de Compra",sub:"POST /purchase-requests + POST .../items. Entra no Sienge como nao autorizada, aguardando avaliacao interna."}),
     h("div",{style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,padding:20,marginTop:16}},
-      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}},
+      h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:14}},
         h(Field,{label:"Codigo da obra (buildingId)",hint:"Use o numero da obra como cadastrado no Sienge (ex.: 102)."}, h("input",{value:building,onChange:function(e){setBuilding(e.target.value);},placeholder:"ex.: 102",style:inp})),
+        h(Field,{label:"Data da solicitacao",hint:"Data em que a solicitacao e registrada."}, h("input",{type:"date",value:reqDate,onChange:function(e){setReqDate(e.target.value);},style:inp})),
         h(Field,{label:"Solicitante (login Sienge)",hint:"Seu usuario de login no Sienge (ex.: RYCARDO)."}, h("input",{value:requester,onChange:function(e){setRequester(e.target.value);},placeholder:"ex.: RYCARDO",style:inp})),
         h(Field,{label:"Departamento (opcional)"}, h("input",{value:dept,onChange:function(e){setDept(e.target.value);},placeholder:"ex.: 5",style:inp}))),
       h("div",{style:{fontWeight:700,fontSize:15,margin:"8px 0 10px"}},"Insumos"),
@@ -465,7 +467,7 @@ function App(){
     if(!live){ var fake=assign({id:Math.floor(8000+Math.random()*999)},payload,{items:items,status:"PENDING"}); setRequests(function(p){return [fake].concat(p);}); log("(demo) POST /purchase-requests"); if(items.length)log("(demo) POST /purchase-requests/"+fake.id+"/items ("+items.length+")"); notify("Solicitacao criada (demo) #"+fake.id); return; }
     // monta corpo compativel com a API do Sienge (nomes de campo reais: buildingId, requestDate, productId, departamentId)
     var hoje = new Date().toISOString().slice(0,10);
-    var bodyReq = { buildingId: Number(payload.buildingId), requestDate: hoje };
+    var bodyReq = { buildingId: Number(payload.buildingId), requestDate: payload.requestDate || hoje };
     if(payload.requesterUser){ bodyReq.createdBy = payload.requesterUser; }
     bodyReq.departamentId = payload.departmentId ? Number(payload.departmentId) : null;
     var bodyItems = items.map(function(it){ var o={ productId: Number(it.code), quantity: Number(it.qty)||1 }; if(it.name) o.notes=it.name; return o; });
