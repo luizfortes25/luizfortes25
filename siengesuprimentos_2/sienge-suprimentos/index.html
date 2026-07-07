@@ -383,7 +383,7 @@ function KV(p){
     h("div",{style:{fontSize:p.mono?12.5:15,fontWeight:600,marginTop:2,fontFamily:p.mono?M:F,wordBreak:"break-all"}},p.v));
 }
 
-function App(){
+function App(p){
   var ts=useState("orders"),tab=ts[0],setTab=ts[1];
   var cs=useState({baseUrl:"",token:""}),cfg=cs[0],setCfg=cs[1];
   var cn=useState(false),connected=cn[0],setConnected=cn[1];
@@ -630,8 +630,12 @@ function App(){
       h("div",{style:{display:"flex",alignItems:"center",gap:12}},
         h("div",{style:{width:30,height:30,borderRadius:7,background:C.orange,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:17}},"S"),
         h("div",{style:{fontWeight:700,fontSize:17}},"Sienge ",h("span",{style:{fontWeight:400,color:"#9fb0c0"}},"· Suprimentos"))),
-      h("span",{style:{display:"inline-flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:20,background:live?"rgba(31,157,85,.2)":"rgba(201,138,0,.2)",color:live?"#7ee0a8":"#f0c86a",fontWeight:600,fontSize:13}},
-        h("span",{style:{width:7,height:7,borderRadius:7,background:live?C.green:C.amber}}),live?"Conectado":"Modo demo")),
+      h("div",{style:{display:"flex",alignItems:"center",gap:12}},
+        h("span",{style:{display:"inline-flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:20,background:live?"rgba(31,157,85,.2)":"rgba(201,138,0,.2)",color:live?"#7ee0a8":"#f0c86a",fontWeight:600,fontSize:13}},
+          h("span",{style:{width:7,height:7,borderRadius:7,background:live?C.green:C.amber}}),live?"Conectado":"Modo demo"),
+        (p&&p.user)?h("div",{style:{display:"flex",alignItems:"center",gap:9}},
+          h("span",{style:{fontSize:13,color:"#cfe0ee",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},p.user.fullName||p.user.email),
+          h("button",{className:"btn",onClick:p.onLogout,style:{background:"rgba(255,255,255,.14)",color:"#fff",padding:"5px 12px",borderRadius:7,fontSize:13}},"Sair")):null)),
     h("div",{style:{background:C.panel,borderBottom:"1px solid "+C.line,padding:"0 18px",display:"flex",gap:2,overflowX:"auto"}},
       NAV.map(function(nv){return h("button",{key:nv[0],className:"btn",onClick:function(){setTab(nv[0]);},style:{background:"transparent",padding:"14px 16px",fontSize:14,whiteSpace:"nowrap",color:tab===nv[0]?C.orange:C.muted,borderBottom:"3px solid "+(tab===nv[0]?C.orange:"transparent")}},nv[1]);})),
     h("div",{style:{maxWidth:1120,margin:"0 auto",padding:"22px 18px 70px"}}, content),
@@ -639,7 +643,53 @@ function App(){
     toast?h("div",{style:{position:"fixed",bottom:22,left:"50%",transform:"translateX(-50%)",background:C.ink,color:"#fff",padding:"12px 20px",borderRadius:10,fontSize:14,fontFamily:M,boxShadow:"0 12px 30px rgba(0,0,0,.28)",zIndex:60,maxWidth:"92vw"}},toast):null);
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+function Auth(p){
+  var ms=useState("login"),mode=ms[0],setMode=ms[1];
+  var ns=useState(""),name=ns[0],setName=ns[1];
+  var es=useState(""),email=es[0],setEmail=es[1];
+  var ps=useState(""),pass=ps[0],setPass=ps[1];
+  var ls=useState(false),loading=ls[0],setLoading=ls[1];
+  var er=useState(""),err=er[0],setErr=er[1];
+  function submit(){
+    setErr("");
+    if(mode==="register" && !name.trim()){ setErr("Informe o nome completo"); return; }
+    if(!email.trim()||!pass){ setErr("Informe e-mail e senha"); return; }
+    if(mode==="register" && pass.length<6){ setErr("A senha deve ter ao menos 6 caracteres"); return; }
+    setLoading(true);
+    var pathU=mode==="register"?"/api/auth/register":"/api/auth/login";
+    var body=mode==="register"?{fullName:name.trim(),email:email.trim(),password:pass}:{email:email.trim(),password:pass};
+    fetch(pathU,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+      .then(function(r){ return r.text().then(function(t){ var d=null; try{d=t?JSON.parse(t):null;}catch(e){} if(!r.ok) throw new Error((d&&d.error)||("Erro "+r.status)); return d; }); })
+      .then(function(d){ p.onAuth(d); })
+      .catch(function(e){ setErr(e.message); })
+      .then(function(){ setLoading(false); });
+  }
+  function onKey(e){ if(e.key==="Enter") submit(); }
+  return h("div",{style:{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:20,fontFamily:F}},
+    h("div",{style:{width:"100%",maxWidth:400,background:"#fff",border:"1px solid "+C.line,borderRadius:14,padding:28,boxShadow:"0 14px 44px rgba(0,0,0,.09)"}},
+      h("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:6}},
+        h("div",{style:{width:34,height:34,borderRadius:8,background:C.orange,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,color:"#fff",fontSize:18}},"S"),
+        h("div",{style:{fontWeight:800,fontSize:19,color:C.ink}},"Sienge Suprimentos")),
+      h("div",{style:{color:C.muted,fontSize:14,marginBottom:20}}, mode==="register"?"Crie sua conta de acesso":"Entre na sua conta"),
+      mode==="register"?h(Field,{label:"Nome completo"}, h("input",{value:name,onChange:function(e){setName(e.target.value);},onKeyDown:onKey,placeholder:"Seu nome completo",style:inp})):null,
+      h(Field,{label:"E-mail"}, h("input",{value:email,onChange:function(e){setEmail(e.target.value);},onKeyDown:onKey,type:"email",placeholder:"voce@email.com",style:inp})),
+      h(Field,{label:"Senha"}, h("input",{value:pass,onChange:function(e){setPass(e.target.value);},onKeyDown:onKey,type:"password",placeholder:"minimo 6 caracteres",style:inp})),
+      err?h("div",{style:{color:C.red,fontSize:13,margin:"2px 0 2px"}},err):null,
+      h("button",{className:"btn",onClick:submit,disabled:loading,style:{marginTop:14,width:"100%",background:C.orange,color:"#fff",padding:"12px",borderRadius:8,fontSize:15,opacity:loading?.7:1}}, loading?"Aguarde...":(mode==="register"?"Cadastrar":"Entrar")),
+      h("div",{style:{textAlign:"center",marginTop:16,fontSize:13,color:C.muted}},
+        mode==="register"?"Ja tem conta? ":"Nao tem conta? ",
+        h("button",{className:"btn",onClick:function(){setMode(mode==="register"?"login":"register");setErr("");},style:{background:"transparent",color:C.orange,fontWeight:600,padding:0}}, mode==="register"?"Entrar":"Cadastre-se"))));
+}
+
+function Root(){
+  var as=useState(function(){ try{ return JSON.parse(localStorage.getItem("sienge_auth")||"null"); }catch(e){ return null; } }),auth=as[0],setAuth=as[1];
+  function onAuth(d){ try{ localStorage.setItem("sienge_auth",JSON.stringify(d)); }catch(e){} setAuth(d); }
+  function onLogout(){ try{ localStorage.removeItem("sienge_auth"); }catch(e){} setAuth(null); }
+  if(!auth||!auth.token) return h(Auth,{onAuth:onAuth});
+  return h(App,{user:auth.user,onLogout:onLogout});
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(Root));
 })();
 </script>
 </body>

@@ -24,6 +24,7 @@ try { require("dotenv").config(); } catch (e) { /* dotenv opcional */ }
 
 const express = require("express");
 const cors = require("cors");
+const crypto = require("crypto");
 
 const app = express();
 const path = require("path");
@@ -33,7 +34,92 @@ app.use(express.json());
 // Assim basta UMA hospedagem (ex.: Render) e voce abre tudo pela URL publica.
 app.use(express.static(__dirname));
 
-const { SIENGE_SUBDOMAIN, SIENGE_USER, SIENGE_PASSWORD, APP_TOKEN, PORT = 3001 } = process.env;
+const { SIENGE_SUBDOMAIN, SIENGE_USER, SIENGE_PASSWORD, APP_TOKEN, DATABASE_URL, PORT = 3001 } = process.env;
+
+// ============================================================
+//  BANCO DE DADOS (usuarios) — PostgreSQL
+// ============================================================
+let pool = null;
+if (DATABASE_URL) {
+  try {
+    const { Pool } = require("pg");
+    pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    pool.query(`CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      full_name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`).then(() => console.log("Tabela 'users' pronta.")).catch((e) => console.error("Erro ao criar tabela users:", e.message));
+  } catch (e) { console.error("Falha ao iniciar o banco (pg):", e.message); }
+}
+
+// ---- seguranca de senha (scrypt nativo do Node, sem dependencia extra) ----
+function hashPassword(pw) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(String(pw), salt, 64).toString("hex");
+  return salt + ":" + hash;
+}
+function verifyPassword(pw, stored) {
+  const parts = String(stored || "").split(":");
+  if (parts.length !== 2) return false;
+  const hash = crypto.scryptSync(String(pw), parts[0], 64).toString("hex");
+  const a = Buffer.from(hash), b = Buffer.from(parts[1]);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+// ---- token de sessao assinado (stateless) ----
+const SESSION_SECRET = APP_TOKEN || "sienge-session-secret";
+function makeSessionToken(user) {
+  const payload = Buffer.from(JSON.stringify({ id: user.id, email: user.email, exp: Date.now() + 7 * 24 * 3600 * 1000 })).toString("base64");
+  const sig = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("hex");
+  return payload + "." + sig;
+}
+function verifySessionToken(tok) {
+  const parts = String(tok || "").split(".");
+  if (parts.length !== 2) return null;
+  const expected = crypto.createHmac("sha256", SESSION_SECRET).update(parts[0]).digest("hex");
+  if (expected !== parts[1]) return null;
+  try { const d = JSON.parse(Buffer.from(parts[0], "base64").toString()); if (d.exp < Date.now()) return null; return d; } catch (e) { return null; }
+}
+
+const AP = "/api/auth";
+app.post(`${AP}/register`, async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Banco de dados nao configurado (defina DATABASE_URL)" });
+  try {
+    const fullName = String((req.body && req.body.fullName) || "").trim();
+    const email = String((req.body && req.body.email) || "").trim().toLowerCase();
+    const password = String((req.body && req.body.password) || "");
+    if (!fullName || !email || !password) return res.status(400).json({ error: "Preencha nome, e-mail e senha" });
+    if (password.length < 6) return res.status(400).json({ error: "A senha deve ter ao menos 6 caracteres" });
+    const r = await pool.query(
+      "INSERT INTO users(full_name, email, password_hash) VALUES($1,$2,$3) RETURNING id, full_name, email",
+      [fullName, email, hashPassword(password)]
+    );
+    const u = r.rows[0];
+    res.json({ token: makeSessionToken(u), user: { id: u.id, fullName: u.full_name, email: u.email } });
+  } catch (e) {
+    if (e.code === "23505") return res.status(409).json({ error: "Este e-mail ja esta cadastrado" });
+    console.error(e); res.status(500).json({ error: "Erro ao cadastrar" });
+  }
+});
+app.post(`${AP}/login`, async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Banco de dados nao configurado (defina DATABASE_URL)" });
+  try {
+    const email = String((req.body && req.body.email) || "").trim().toLowerCase();
+    const password = String((req.body && req.body.password) || "");
+    if (!email || !password) return res.status(400).json({ error: "Informe e-mail e senha" });
+    const r = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
+    if (!r.rows.length || !verifyPassword(password, r.rows[0].password_hash)) return res.status(401).json({ error: "E-mail ou senha invalidos" });
+    const u = r.rows[0];
+    res.json({ token: makeSessionToken(u), user: { id: u.id, fullName: u.full_name, email: u.email } });
+  } catch (e) { console.error(e); res.status(500).json({ error: "Erro ao entrar" }); }
+});
+app.get(`${AP}/me`, (req, res) => {
+  const d = verifySessionToken((req.headers.authorization || "").replace("Bearer ", ""));
+  if (!d) return res.status(401).json({ error: "Nao autenticado" });
+  res.json({ id: d.id, email: d.email });
+});
 
 const SIENGE_BASE = `https://api.sienge.com.br/${SIENGE_SUBDOMAIN}/public/api/v1`;
 const SIENGE_AUTH = "Basic " + Buffer.from(`${SIENGE_USER}:${SIENGE_PASSWORD}`).toString("base64");
