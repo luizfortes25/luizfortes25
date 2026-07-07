@@ -36,6 +36,9 @@ app.use(express.static(__dirname));
 
 const { SIENGE_SUBDOMAIN, SIENGE_USER, SIENGE_PASSWORD, APP_TOKEN, DATABASE_URL, PORT = 3001 } = process.env;
 
+// Modulos de acesso que o admin pode liberar por usuario.
+const ALL_PERMS = ["orders", "new", "stock", "nfes", "flow", "endpoints"];
+
 // ============================================================
 //  BANCO DE DADOS (usuarios) — PostgreSQL
 // ============================================================
@@ -54,14 +57,15 @@ if (DATABASE_URL) {
         created_at TIMESTAMPTZ DEFAULT now()
       )`);
       await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'`);
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB NOT NULL DEFAULT '[]'::jsonb`);
       // Garante o super-admin a partir das variaveis de ambiente (senha nunca fica no codigo).
       const { ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
       if (ADMIN_EMAIL && ADMIN_PASSWORD) {
         const adminLogin = String(ADMIN_EMAIL).toLowerCase().trim();
         await pool.query(
-          `INSERT INTO users(full_name, email, password_hash, role) VALUES($1,$2,$3,'superadmin')
-           ON CONFLICT (email) DO UPDATE SET password_hash=EXCLUDED.password_hash, full_name=EXCLUDED.full_name, role='superadmin'`,
-          [String(ADMIN_NAME || "Administrador"), adminLogin, hashPassword(String(ADMIN_PASSWORD))]
+          `INSERT INTO users(full_name, email, password_hash, role, permissions) VALUES($1,$2,$3,'superadmin',$4::jsonb)
+           ON CONFLICT (email) DO UPDATE SET password_hash=EXCLUDED.password_hash, full_name=EXCLUDED.full_name, role='superadmin', permissions=EXCLUDED.permissions`,
+          [String(ADMIN_NAME || "Administrador"), adminLogin, hashPassword(String(ADMIN_PASSWORD)), JSON.stringify(ALL_PERMS)]
         );
         console.log("Super-admin garantido:", adminLogin);
       }
@@ -99,26 +103,13 @@ function verifySessionToken(tok) {
   try { const d = JSON.parse(Buffer.from(parts[0], "base64").toString()); if (d.exp < Date.now()) return null; return d; } catch (e) { return null; }
 }
 
+function publicUser(u) {
+  return { id: u.id, fullName: u.full_name, email: u.email, role: u.role, permissions: u.permissions || [] };
+}
+
 const AP = "/api/auth";
-app.post(`${AP}/register`, async (req, res) => {
-  if (!pool) return res.status(503).json({ error: "Banco de dados nao configurado (defina DATABASE_URL)" });
-  try {
-    const fullName = String((req.body && req.body.fullName) || "").trim();
-    const email = String((req.body && req.body.email) || "").trim().toLowerCase();
-    const password = String((req.body && req.body.password) || "");
-    if (!fullName || !email || !password) return res.status(400).json({ error: "Preencha nome, e-mail e senha" });
-    if (password.length < 6) return res.status(400).json({ error: "A senha deve ter ao menos 6 caracteres" });
-    const r = await pool.query(
-      "INSERT INTO users(full_name, email, password_hash) VALUES($1,$2,$3) RETURNING id, full_name, email, role",
-      [fullName, email, hashPassword(password)]
-    );
-    const u = r.rows[0];
-    res.json({ token: makeSessionToken(u), user: { id: u.id, fullName: u.full_name, email: u.email, role: u.role } });
-  } catch (e) {
-    if (e.code === "23505") return res.status(409).json({ error: "Este e-mail ja esta cadastrado" });
-    console.error(e); res.status(500).json({ error: "Erro ao cadastrar" });
-  }
-});
+// Cadastro publico DESATIVADO: novos usuarios sao criados apenas pelo administrador.
+app.post(`${AP}/register`, (req, res) => res.status(403).json({ error: "O cadastro e feito apenas pelo administrador." }));
 app.post(`${AP}/login`, async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Banco de dados nao configurado (defina DATABASE_URL)" });
   try {
@@ -128,16 +119,85 @@ app.post(`${AP}/login`, async (req, res) => {
     const r = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
     if (!r.rows.length || !verifyPassword(password, r.rows[0].password_hash)) return res.status(401).json({ error: "E-mail ou senha invalidos" });
     const u = r.rows[0];
-    res.json({ token: makeSessionToken(u), user: { id: u.id, fullName: u.full_name, email: u.email, role: u.role } });
+    res.json({ token: makeSessionToken(u), user: publicUser(u) });
   } catch (e) { console.error(e); res.status(500).json({ error: "Erro ao entrar" }); }
 });
-app.get(`${AP}/me`, (req, res) => {
+app.get(`${AP}/me`, async (req, res) => {
   const d = verifySessionToken((req.headers.authorization || "").replace("Bearer ", ""));
   if (!d) return res.status(401).json({ error: "Nao autenticado" });
-  res.json({ id: d.id, email: d.email });
+  if (!pool) return res.json({ id: d.id, email: d.email, role: d.role, permissions: [] });
+  try {
+    const r = await pool.query("SELECT * FROM users WHERE id=$1", [d.id]);
+    if (!r.rows.length) return res.status(401).json({ error: "Usuario nao encontrado" });
+    res.json(publicUser(r.rows[0]));
+  } catch (e) { res.json({ id: d.id, email: d.email, role: d.role, permissions: [] }); }
 });
 // Informa se o login esta ativo (so exige acesso quando o banco esta configurado).
 app.get(`${AP}/enabled`, (req, res) => res.json({ enabled: !!pool }));
+
+// ============================================================
+//  ADMIN — gestao de usuarios (apenas super-admin)
+// ============================================================
+function requireAdmin(req, res, next) {
+  const d = verifySessionToken((req.headers.authorization || "").replace("Bearer ", ""));
+  if (!d) return res.status(401).json({ error: "Nao autenticado" });
+  if (d.role !== "superadmin") return res.status(403).json({ error: "Apenas administradores" });
+  req.authUser = d;
+  next();
+}
+const ADM = "/api/admin";
+app.get(`${ADM}/users`, requireAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Banco nao configurado" });
+  try {
+    const r = await pool.query("SELECT id, full_name, email, role, permissions FROM users ORDER BY id");
+    res.json(r.rows.map(publicUser));
+  } catch (e) { console.error(e); res.status(500).json({ error: "Erro ao listar usuarios" }); }
+});
+app.post(`${ADM}/users`, requireAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Banco nao configurado" });
+  try {
+    const b = req.body || {};
+    const fullName = String(b.fullName || "").trim();
+    const email = String(b.email || "").trim().toLowerCase();
+    const password = String(b.password || "");
+    const role = b.role === "superadmin" ? "superadmin" : "user";
+    const perms = Array.isArray(b.permissions) ? b.permissions.filter((p) => ALL_PERMS.indexOf(p) !== -1) : [];
+    if (!fullName || !email || !password) return res.status(400).json({ error: "Preencha nome, e-mail e senha" });
+    if (password.length < 6) return res.status(400).json({ error: "A senha deve ter ao menos 6 caracteres" });
+    const r = await pool.query(
+      "INSERT INTO users(full_name, email, password_hash, role, permissions) VALUES($1,$2,$3,$4,$5::jsonb) RETURNING id, full_name, email, role, permissions",
+      [fullName, email, hashPassword(password), role, JSON.stringify(role === "superadmin" ? ALL_PERMS : perms)]
+    );
+    res.json(publicUser(r.rows[0]));
+  } catch (e) {
+    if (e.code === "23505") return res.status(409).json({ error: "Este e-mail ja esta cadastrado" });
+    console.error(e); res.status(500).json({ error: "Erro ao criar usuario" });
+  }
+});
+app.patch(`${ADM}/users/:id`, requireAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Banco nao configurado" });
+  try {
+    const b = req.body || {}, sets = [], vals = []; let i = 1;
+    if (b.role !== undefined) { sets.push(`role=$${i++}`); vals.push(b.role === "superadmin" ? "superadmin" : "user"); }
+    if (b.permissions !== undefined) { const perms = Array.isArray(b.permissions) ? b.permissions.filter((p) => ALL_PERMS.indexOf(p) !== -1) : []; sets.push(`permissions=$${i++}::jsonb`); vals.push(JSON.stringify(b.role === "superadmin" ? ALL_PERMS : perms)); }
+    if (b.fullName !== undefined) { sets.push(`full_name=$${i++}`); vals.push(String(b.fullName)); }
+    if (b.password) { if (String(b.password).length < 6) return res.status(400).json({ error: "A senha deve ter ao menos 6 caracteres" }); sets.push(`password_hash=$${i++}`); vals.push(hashPassword(String(b.password))); }
+    if (!sets.length) return res.status(400).json({ error: "Nada para atualizar" });
+    vals.push(Number(req.params.id));
+    const r = await pool.query(`UPDATE users SET ${sets.join(", ")} WHERE id=$${i} RETURNING id, full_name, email, role, permissions`, vals);
+    if (!r.rows.length) return res.status(404).json({ error: "Usuario nao encontrado" });
+    res.json(publicUser(r.rows[0]));
+  } catch (e) { console.error(e); res.status(500).json({ error: "Erro ao atualizar" }); }
+});
+app.delete(`${ADM}/users/:id`, requireAdmin, async (req, res) => {
+  if (!pool) return res.status(503).json({ error: "Banco nao configurado" });
+  try {
+    const id = Number(req.params.id);
+    if (id === req.authUser.id) return res.status(400).json({ error: "Voce nao pode excluir a si mesmo" });
+    await pool.query("DELETE FROM users WHERE id=$1", [id]);
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: "Erro ao excluir" }); }
+});
 
 const SIENGE_BASE = `https://api.sienge.com.br/${SIENGE_SUBDOMAIN}/public/api/v1`;
 const SIENGE_AUTH = "Basic " + Buffer.from(`${SIENGE_USER}:${SIENGE_PASSWORD}`).toString("base64");

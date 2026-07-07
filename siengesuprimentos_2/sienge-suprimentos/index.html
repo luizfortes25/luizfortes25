@@ -560,8 +560,11 @@ function App(p){
   }
 
   var counts = useMemo(function(){ var c={PENDING:0,QUOTING:0,AUTHORIZED:0,total:0}; orders.forEach(function(o){ c.total+=o.value||0; if(c[o.status]!=null)c[o.status]++; }); return c; },[orders]);
-  var NAV=[["orders","Pedidos"],["new","Nova Solicitacao"],["stock","Estoque"],["nfes","Notas Fiscais"],["flow","Fluxo"],["endpoints","Endpoints"]];
-  if(isAdmin) NAV.push(["connect","Conexao"]);
+  var perms=(p&&p.user&&p.user.permissions)||[];
+  var NAV = isAdmin ? USER_MODULES.slice() : USER_MODULES.filter(function(m){return perms.indexOf(m[0])!==-1;});
+  if(isAdmin){ NAV.push(["users","Usuarios"]); NAV.push(["connect","Conexao"]); }
+  var allowedTab={}; NAV.forEach(function(nv){allowedTab[nv[0]]=true;});
+  var view = allowedTab[tab] ? tab : (NAV.length ? NAV[0][0] : "__none__");
 
   var ordersView = h("div",{className:"fade"},
     h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:20}},
@@ -629,12 +632,14 @@ function App(p){
       h("strong",null,"Como ligar de verdade: ")," suba o backend Node.js (backend-sienge.js), coloque as credenciais do Sienge nas variaveis de ambiente, publique no Render/Railway/Heroku e cole a URL acima. O backend respeita o limite de 200 req/min."));
 
   var content;
-  if(tab==="orders") content=ordersView;
-  else if(tab==="new") content=h(NewRequest,{onCreate:createRequest,requests:requests,live:live});
-  else if(tab==="stock") content=h(Stock,{stock:stock,movements:movements,onMovement:createMovement,onLoadStock:loadStock,loading:loading,live:live});
-  else if(tab==="nfes") content=h(NFes,{nfes:nfes,onReload:loadNfes,live:live});
-  else if(tab==="flow") content=h(Flow,null);
-  else if(tab==="endpoints") content=h(Endpoints,null);
+  if(view==="__none__") content=h("div",{style:{maxWidth:520,margin:"40px auto",textAlign:"center",color:C.muted,fontSize:15,lineHeight:1.6}},"Voce ainda nao tem permissoes de acesso. Peca ao administrador para liberar os modulos.");
+  else if(view==="orders") content=ordersView;
+  else if(view==="new") content=h(NewRequest,{onCreate:createRequest,requests:requests,live:live});
+  else if(view==="stock") content=h(Stock,{stock:stock,movements:movements,onMovement:createMovement,onLoadStock:loadStock,loading:loading,live:live});
+  else if(view==="nfes") content=h(NFes,{nfes:nfes,onReload:loadNfes,live:live});
+  else if(view==="flow") content=h(Flow,null);
+  else if(view==="endpoints") content=h(Endpoints,null);
+  else if(view==="users") content=isAdmin?h(Users,{token:p.token}):ordersView;
   else content = isAdmin ? connectView : ordersView;
 
   return h("div",{style:{minHeight:"100vh",background:C.bg,color:C.ink,fontFamily:F}},
@@ -649,28 +654,22 @@ function App(p){
           h("span",{style:{fontSize:13,color:"#cfe0ee",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},p.user.fullName||p.user.email),
           h("button",{className:"btn",onClick:p.onLogout,style:{background:"rgba(255,255,255,.14)",color:"#fff",padding:"5px 12px",borderRadius:7,fontSize:13}},"Sair")):null)),
     h("div",{style:{background:C.panel,borderBottom:"1px solid "+C.line,padding:"0 18px",display:"flex",gap:2,overflowX:"auto"}},
-      NAV.map(function(nv){return h("button",{key:nv[0],className:"btn",onClick:function(){setTab(nv[0]);},style:{background:"transparent",padding:"14px 16px",fontSize:14,whiteSpace:"nowrap",color:tab===nv[0]?C.orange:C.muted,borderBottom:"3px solid "+(tab===nv[0]?C.orange:"transparent")}},nv[1]);})),
+      NAV.map(function(nv){return h("button",{key:nv[0],className:"btn",onClick:function(){setTab(nv[0]);},style:{background:"transparent",padding:"14px 16px",fontSize:14,whiteSpace:"nowrap",color:view===nv[0]?C.orange:C.muted,borderBottom:"3px solid "+(view===nv[0]?C.orange:"transparent")}},nv[1]);})),
     h("div",{style:{maxWidth:1120,margin:"0 auto",padding:"22px 18px 70px"}}, content),
     modal?h(Modal,{modal:modal,close:function(){setModal(null);},onAuthorize:doAuthorize,onDisapprove:doDisapprove,onAttach:attach,onEval:evaluate}):null,
     toast?h("div",{style:{position:"fixed",bottom:22,left:"50%",transform:"translateX(-50%)",background:C.ink,color:"#fff",padding:"12px 20px",borderRadius:10,fontSize:14,fontFamily:M,boxShadow:"0 12px 30px rgba(0,0,0,.28)",zIndex:60,maxWidth:"92vw"}},toast):null);
 }
 
 function Auth(p){
-  var ms=useState("login"),mode=ms[0],setMode=ms[1];
-  var ns=useState(""),name=ns[0],setName=ns[1];
   var es=useState(""),email=es[0],setEmail=es[1];
   var ps=useState(""),pass=ps[0],setPass=ps[1];
   var ls=useState(false),loading=ls[0],setLoading=ls[1];
   var er=useState(""),err=er[0],setErr=er[1];
   function submit(){
     setErr("");
-    if(mode==="register" && !name.trim()){ setErr("Informe o nome completo"); return; }
     if(!email.trim()||!pass){ setErr("Informe e-mail e senha"); return; }
-    if(mode==="register" && pass.length<6){ setErr("A senha deve ter ao menos 6 caracteres"); return; }
     setLoading(true);
-    var pathU=mode==="register"?"/api/auth/register":"/api/auth/login";
-    var body=mode==="register"?{fullName:name.trim(),email:email.trim(),password:pass}:{email:email.trim(),password:pass};
-    fetch(pathU,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+    fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email.trim(),password:pass})})
       .then(function(r){ return r.text().then(function(t){ var d=null; try{d=t?JSON.parse(t):null;}catch(e){} if(!r.ok) throw new Error((d&&d.error)||("Erro "+r.status)); return d; }); })
       .then(function(d){ p.onAuth(d); })
       .catch(function(e){ setErr(e.message); })
@@ -682,21 +681,88 @@ function Auth(p){
       h("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:6}},
         h("div",{style:{width:34,height:34,borderRadius:8,background:C.orange,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,color:"#fff",fontSize:18}},"S"),
         h("div",{style:{fontWeight:800,fontSize:19,color:C.ink}},"Sienge Suprimentos")),
-      h("div",{style:{color:C.muted,fontSize:14,marginBottom:20}}, mode==="register"?"Crie sua conta de acesso":"Entre na sua conta"),
-      mode==="register"?h(Field,{label:"Nome completo"}, h("input",{value:name,onChange:function(e){setName(e.target.value);},onKeyDown:onKey,placeholder:"Seu nome completo",style:inp})):null,
-      h(Field,{label:mode==="register"?"E-mail":"E-mail ou usuario"}, h("input",{value:email,onChange:function(e){setEmail(e.target.value);},onKeyDown:onKey,type:mode==="register"?"email":"text",placeholder:mode==="register"?"voce@email.com":"e-mail ou usuario",style:inp})),
-      h(Field,{label:"Senha"}, h("input",{value:pass,onChange:function(e){setPass(e.target.value);},onKeyDown:onKey,type:"password",placeholder:"minimo 6 caracteres",style:inp})),
+      h("div",{style:{color:C.muted,fontSize:14,marginBottom:20}},"Entre na sua conta"),
+      h(Field,{label:"E-mail ou usuario"}, h("input",{value:email,onChange:function(e){setEmail(e.target.value);},onKeyDown:onKey,type:"text",placeholder:"e-mail ou usuario",style:inp})),
+      h(Field,{label:"Senha"}, h("input",{value:pass,onChange:function(e){setPass(e.target.value);},onKeyDown:onKey,type:"password",placeholder:"sua senha",style:inp})),
       err?h("div",{style:{color:C.red,fontSize:13,margin:"2px 0 2px"}},err):null,
-      h("button",{className:"btn",onClick:submit,disabled:loading,style:{marginTop:14,width:"100%",background:C.orange,color:"#fff",padding:"12px",borderRadius:8,fontSize:15,opacity:loading?.7:1}}, loading?"Aguarde...":(mode==="register"?"Cadastrar":"Entrar")),
-      h("div",{style:{textAlign:"center",marginTop:16,fontSize:13,color:C.muted}},
-        mode==="register"?"Ja tem conta? ":"Nao tem conta? ",
-        h("button",{className:"btn",onClick:function(){setMode(mode==="register"?"login":"register");setErr("");},style:{background:"transparent",color:C.orange,fontWeight:600,padding:0}}, mode==="register"?"Entrar":"Cadastre-se"))));
+      h("button",{className:"btn",onClick:submit,disabled:loading,style:{marginTop:14,width:"100%",background:C.orange,color:"#fff",padding:"12px",borderRadius:8,fontSize:15,opacity:loading?.7:1}}, loading?"Aguarde...":"Entrar"),
+      h("div",{style:{textAlign:"center",marginTop:16,fontSize:12.5,color:C.muted}},"O acesso e criado pelo administrador.")));
+}
+
+var USER_MODULES=[["orders","Pedidos"],["new","Nova Solicitacao"],["stock","Estoque"],["nfes","Notas Fiscais"],["flow","Fluxo"],["endpoints","Endpoints"]];
+
+function Users(p){
+  var us=useState([]),list=us[0],setList=us[1];
+  var ls=useState(true),loading=ls[0],setLoading=ls[1];
+  var er=useState(""),err=er[0],setErr=er[1];
+  var ok=useState(""),okMsg=ok[0],setOk=ok[1];
+  var ns=useState({fullName:"",email:"",password:"",permissions:[],admin:false}),nu=ns[0],setNu=ns[1];
+  function authFetch(pathU,opts){ opts=opts||{}; opts.headers=assign({"Content-Type":"application/json",Authorization:"Bearer "+p.token},opts.headers||{}); return fetch(pathU,opts).then(function(r){ return r.text().then(function(t){ var d=null; try{d=t?JSON.parse(t):null;}catch(e){} if(!r.ok) throw new Error((d&&d.error)||("Erro "+r.status)); return d; }); }); }
+  function reload(){ setLoading(true); authFetch("/api/admin/users").then(function(d){ setList(d||[]); setErr(""); }).catch(function(e){ setErr(e.message); }).then(function(){ setLoading(false); }); }
+  useEffect(function(){ reload(); },[]);
+  function toggle(arr,key){ arr=arr||[]; return arr.indexOf(key)!==-1?arr.filter(function(k){return k!==key;}):arr.concat([key]); }
+  function createUser(){
+    setErr(""); setOk("");
+    if(!nu.fullName.trim()||!nu.email.trim()||!nu.password){ setErr("Preencha nome, e-mail e senha"); return; }
+    if(nu.password.length<6){ setErr("A senha deve ter ao menos 6 caracteres"); return; }
+    authFetch("/api/admin/users",{method:"POST",body:JSON.stringify({fullName:nu.fullName.trim(),email:nu.email.trim(),password:nu.password,role:nu.admin?"superadmin":"user",permissions:nu.permissions})})
+      .then(function(){ setNu({fullName:"",email:"",password:"",permissions:[],admin:false}); setOk("Usuario criado!"); reload(); })
+      .catch(function(e){ setErr(e.message); });
+  }
+  function saveUser(u){ authFetch("/api/admin/users/"+u.id,{method:"PATCH",body:JSON.stringify({permissions:u.permissions,role:u.role})}).then(function(){ setOk("Permissoes salvas para "+u.email); reload(); }).catch(function(e){ setErr(e.message); }); }
+  function delUser(u){ if(!window.confirm("Excluir o usuario "+u.email+"?"))return; authFetch("/api/admin/users/"+u.id,{method:"DELETE"}).then(function(){ setOk("Usuario excluido"); reload(); }).catch(function(e){ setErr(e.message); }); }
+  function localPerm(id,key){ setList(list.map(function(u){ return u.id!==id?u:assign({},u,{permissions:toggle(u.permissions,key)}); })); }
+  function localRole(id,val){ setList(list.map(function(u){ return u.id!==id?u:assign({},u,{role:val}); })); }
+  var chk={display:"inline-flex",alignItems:"center",gap:5,fontSize:12.5,color:C.steel,marginRight:10,marginBottom:4};
+  return h("div",{className:"fade",style:{maxWidth:900}},
+    h(H,{title:"Usuarios",sub:"Somente o administrador cria contas e define os modulos que cada usuario pode acessar."}),
+    err?h("div",{style:{marginTop:12,background:C.redBg,border:"1px solid #f0b8b8",color:C.red,borderRadius:9,padding:"10px 14px",fontSize:13.5}},err):null,
+    okMsg?h("div",{style:{marginTop:12,background:C.greenBg,border:"1px solid #bfe6cf",color:"#1a6b3d",borderRadius:9,padding:"10px 14px",fontSize:13.5}},okMsg):null,
+    h("div",{style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,padding:20,marginTop:16}},
+      h("div",{style:{fontWeight:700,fontSize:15,marginBottom:12}},"Novo usuario"),
+      h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12}},
+        h(Field,{label:"Nome completo"}, h("input",{value:nu.fullName,onChange:function(e){setNu(assign({},nu,{fullName:e.target.value}));},placeholder:"Nome",style:inp})),
+        h(Field,{label:"E-mail"}, h("input",{value:nu.email,onChange:function(e){setNu(assign({},nu,{email:e.target.value}));},type:"email",placeholder:"email@empresa.com",style:inp})),
+        h(Field,{label:"Senha"}, h("input",{value:nu.password,onChange:function(e){setNu(assign({},nu,{password:e.target.value}));},type:"password",placeholder:"minimo 6 caracteres",style:inp}))),
+      h("div",{style:{marginTop:12}},
+        h("div",{style:{fontSize:12,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.4,marginBottom:6}},"Permissoes de acesso"),
+        h("div",{style:{display:"flex",flexWrap:"wrap"}},
+          USER_MODULES.map(function(m){return h("label",{key:m[0],style:chk},
+            h("input",{type:"checkbox",checked:nu.admin||nu.permissions.indexOf(m[0])!==-1,disabled:nu.admin,onChange:function(){setNu(assign({},nu,{permissions:toggle(nu.permissions,m[0])}));}}),m[1]);})),
+        h("label",{style:assign({},chk,{marginTop:6,fontWeight:600,color:C.orange})},
+          h("input",{type:"checkbox",checked:nu.admin,onChange:function(){setNu(assign({},nu,{admin:!nu.admin}));}}),"Administrador (acesso total)")),
+      h("button",{className:"btn",onClick:createUser,style:{marginTop:14,background:C.orange,color:"#fff",padding:"11px 18px",borderRadius:8,fontSize:14.5}},"Criar usuario")),
+    h("div",{style:{fontWeight:700,fontSize:15,margin:"22px 0 10px"}},"Usuarios cadastrados"),
+    loading?h("div",{style:{color:C.muted,fontSize:14}},"Carregando..."):
+    h("div",{style:{display:"flex",flexDirection:"column",gap:10}},
+      list.map(function(u){ var adm=u.role==="superadmin"; return h("div",{key:u.id,style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,padding:"14px 16px"}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}},
+          h("div",null,
+            h("span",{style:{fontWeight:700}},u.fullName||"(sem nome)"),
+            h("span",{style:{color:C.muted,fontSize:13,marginLeft:8}},u.email),
+            adm?h("span",{style:{marginLeft:8,fontSize:11,fontWeight:700,color:C.orange,background:C.amberBg,padding:"2px 8px",borderRadius:20}},"ADMIN"):null),
+          h("div",{style:{display:"flex",gap:8}},
+            h("button",{className:"btn",onClick:function(){saveUser(u);},style:mini(C.green,"#fff")},"Salvar"),
+            h("button",{className:"btn",onClick:function(){delUser(u);},style:mini("#fff",C.red,C.red)},"Excluir"))),
+        h("div",{style:{display:"flex",flexWrap:"wrap",marginTop:10}},
+          USER_MODULES.map(function(m){return h("label",{key:m[0],style:chk},
+            h("input",{type:"checkbox",checked:adm||(u.permissions||[]).indexOf(m[0])!==-1,disabled:adm,onChange:function(){localPerm(u.id,m[0]);}}),m[1]);}),
+          h("label",{style:assign({},chk,{fontWeight:600,color:C.orange})},
+            h("input",{type:"checkbox",checked:adm,onChange:function(){localRole(u.id,adm?"user":"superadmin");}}),"Administrador"))); })));
 }
 
 function Root(){
   var as=useState(function(){ try{ return JSON.parse(localStorage.getItem("sienge_auth")||"null"); }catch(e){ return null; } }),auth=as[0],setAuth=as[1];
   var gs=useState(null),gate=gs[0],setGate=gs[1]; // null=carregando, true=exige login, false=aberto (banco nao configurado)
   useEffect(function(){ fetch("/api/auth/enabled").then(function(r){return r.json();}).then(function(d){ setGate(!!(d&&d.enabled)); }).catch(function(){ setGate(false); }); },[]);
+  // Atualiza os dados/permissoes do usuario logado (pega mudancas feitas pelo admin).
+  useEffect(function(){
+    if(!auth||!auth.token) return;
+    fetch("/api/auth/me",{headers:{Authorization:"Bearer "+auth.token}})
+      .then(function(r){ if(r.status===401){ throw new Error("expirado"); } return r.json(); })
+      .then(function(u){ if(u&&u.id){ var nd=assign({},auth,{user:u}); try{ localStorage.setItem("sienge_auth",JSON.stringify(nd)); }catch(e){} setAuth(nd); } })
+      .catch(function(){ try{ localStorage.removeItem("sienge_auth"); }catch(e){} setAuth(null); });
+  },[]);
   function onAuth(d){ try{ localStorage.setItem("sienge_auth",JSON.stringify(d)); }catch(e){} setAuth(d); }
   function onLogout(){ try{ localStorage.removeItem("sienge_auth"); }catch(e){} setAuth(null); }
   if(gate===null) return h("div",{style:{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",color:C.muted,fontFamily:F,fontSize:15}},"Carregando...");
