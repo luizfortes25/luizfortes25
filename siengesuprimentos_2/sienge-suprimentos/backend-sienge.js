@@ -39,6 +39,12 @@ const { SIENGE_SUBDOMAIN, SIENGE_USER, SIENGE_PASSWORD, APP_TOKEN, DATABASE_URL,
 // Modulos de acesso que o admin pode liberar por usuario.
 const ALL_PERMS = ["orders", "new", "stock", "nfes", "flow", "endpoints"];
 
+// Perfis de acesso.
+const ADMIN_ROLE = "administrador";
+const PROFILES = ["administrador", "aprovador", "operador"];
+function normalizeRole(r) { return PROFILES.indexOf(r) !== -1 ? r : "operador"; }
+function isApprover(r) { return r === "administrador" || r === "aprovador"; }
+
 // ============================================================
 //  BANCO DE DADOS (usuarios) — PostgreSQL
 // ============================================================
@@ -58,16 +64,19 @@ if (DATABASE_URL) {
       )`);
       await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'`);
       await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB NOT NULL DEFAULT '[]'::jsonb`);
-      // Garante o super-admin a partir das variaveis de ambiente (senha nunca fica no codigo).
+      // Migra perfis antigos para os novos nomes.
+      await pool.query(`UPDATE users SET role='administrador' WHERE role IN ('superadmin','admin')`);
+      await pool.query(`UPDATE users SET role='operador' WHERE role='user'`);
+      // Garante o administrador a partir das variaveis de ambiente (senha nunca fica no codigo).
       const { ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
       if (ADMIN_EMAIL && ADMIN_PASSWORD) {
         const adminLogin = String(ADMIN_EMAIL).toLowerCase().trim();
         await pool.query(
-          `INSERT INTO users(full_name, email, password_hash, role, permissions) VALUES($1,$2,$3,'superadmin',$4::jsonb)
-           ON CONFLICT (email) DO UPDATE SET password_hash=EXCLUDED.password_hash, full_name=EXCLUDED.full_name, role='superadmin', permissions=EXCLUDED.permissions`,
+          `INSERT INTO users(full_name, email, password_hash, role, permissions) VALUES($1,$2,$3,'administrador',$4::jsonb)
+           ON CONFLICT (email) DO UPDATE SET password_hash=EXCLUDED.password_hash, full_name=EXCLUDED.full_name, role='administrador', permissions=EXCLUDED.permissions`,
           [String(ADMIN_NAME || "Administrador"), adminLogin, hashPassword(String(ADMIN_PASSWORD)), JSON.stringify(ALL_PERMS)]
         );
-        console.log("Super-admin garantido:", adminLogin);
+        console.log("Administrador garantido:", adminLogin);
       }
       console.log("Banco pronto.");
     })().catch((e) => console.error("Erro ao inicializar o banco:", e.message));
@@ -141,7 +150,7 @@ app.get(`${AP}/enabled`, (req, res) => res.json({ enabled: !!pool }));
 function requireAdmin(req, res, next) {
   const d = verifySessionToken((req.headers.authorization || "").replace("Bearer ", ""));
   if (!d) return res.status(401).json({ error: "Nao autenticado" });
-  if (d.role !== "superadmin") return res.status(403).json({ error: "Apenas administradores" });
+  if (d.role !== ADMIN_ROLE && d.role !== "superadmin") return res.status(403).json({ error: "Apenas administradores" });
   req.authUser = d;
   next();
 }
@@ -160,13 +169,13 @@ app.post(`${ADM}/users`, requireAdmin, async (req, res) => {
     const fullName = String(b.fullName || "").trim();
     const email = String(b.email || "").trim().toLowerCase();
     const password = String(b.password || "");
-    const role = b.role === "superadmin" ? "superadmin" : "user";
+    const role = normalizeRole(b.role);
     const perms = Array.isArray(b.permissions) ? b.permissions.filter((p) => ALL_PERMS.indexOf(p) !== -1) : [];
     if (!fullName || !email || !password) return res.status(400).json({ error: "Preencha nome, e-mail e senha" });
     if (password.length < 6) return res.status(400).json({ error: "A senha deve ter ao menos 6 caracteres" });
     const r = await pool.query(
       "INSERT INTO users(full_name, email, password_hash, role, permissions) VALUES($1,$2,$3,$4,$5::jsonb) RETURNING id, full_name, email, role, permissions",
-      [fullName, email, hashPassword(password), role, JSON.stringify(role === "superadmin" ? ALL_PERMS : perms)]
+      [fullName, email, hashPassword(password), role, JSON.stringify(role === ADMIN_ROLE ? ALL_PERMS : perms)]
     );
     res.json(publicUser(r.rows[0]));
   } catch (e) {
@@ -178,8 +187,8 @@ app.patch(`${ADM}/users/:id`, requireAdmin, async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Banco nao configurado" });
   try {
     const b = req.body || {}, sets = [], vals = []; let i = 1;
-    if (b.role !== undefined) { sets.push(`role=$${i++}`); vals.push(b.role === "superadmin" ? "superadmin" : "user"); }
-    if (b.permissions !== undefined) { const perms = Array.isArray(b.permissions) ? b.permissions.filter((p) => ALL_PERMS.indexOf(p) !== -1) : []; sets.push(`permissions=$${i++}::jsonb`); vals.push(JSON.stringify(b.role === "superadmin" ? ALL_PERMS : perms)); }
+    if (b.role !== undefined) { sets.push(`role=$${i++}`); vals.push(normalizeRole(b.role)); }
+    if (b.permissions !== undefined) { const perms = Array.isArray(b.permissions) ? b.permissions.filter((p) => ALL_PERMS.indexOf(p) !== -1) : []; sets.push(`permissions=$${i++}::jsonb`); vals.push(JSON.stringify(normalizeRole(b.role) === ADMIN_ROLE ? ALL_PERMS : perms)); }
     if (b.fullName !== undefined) { sets.push(`full_name=$${i++}`); vals.push(String(b.fullName)); }
     if (b.password) { if (String(b.password).length < 6) return res.status(400).json({ error: "A senha deve ter ao menos 6 caracteres" }); sets.push(`password_hash=$${i++}`); vals.push(hashPassword(String(b.password))); }
     if (!sets.length) return res.status(400).json({ error: "Nada para atualizar" });
@@ -220,6 +229,15 @@ function requireAppToken(req, res, next) {
   if (auth === `Bearer ${APP_TOKEN}`) return next();   // token fixo do app
   if (verifySessionToken(tok)) return next();          // usuario logado (sessao)
   return res.status(401).json({ error: "Nao autorizado" });
+}
+// So Administrador e Aprovador podem aprovar/reprovar.
+function requireApprover(req, res, next) {
+  const auth = req.headers.authorization || "";
+  const tok = auth.replace("Bearer ", "");
+  if (APP_TOKEN && auth === `Bearer ${APP_TOKEN}`) return next();
+  const d = verifySessionToken(tok);
+  if (d && isApprover(d.role)) return next();
+  return res.status(403).json({ error: "Seu perfil nao permite aprovar ou reprovar" });
 }
 
 // ---- chamada generica ao Sienge ----
@@ -335,19 +353,19 @@ app.get(`${P}/purchase-orders/:id/analysis/pdf`, debugAuth, async (req, res) => 
 //  PEDIDOS — escrita (autorizar / reprovar / anexo / avaliacao)
 // ============================================================
 // Autorizar (PUT)
-app.put(`${P}/purchase-orders/:id/authorize`, requireAppToken, async (req, res) => {
+app.put(`${P}/purchase-orders/:id/authorize`, requireApprover, async (req, res) => {
   try { res.json(await sienge("PUT", `/purchase-orders/${req.params.id}/authorize`)); } catch (e) { fail(res, e); }
 });
 // Autorizar com observacao (PATCH)
-app.patch(`${P}/purchase-orders/:id/authorize`, requireAppToken, async (req, res) => {
+app.patch(`${P}/purchase-orders/:id/authorize`, requireApprover, async (req, res) => {
   try { res.json(await sienge("PATCH", `/purchase-orders/${req.params.id}/authorize`, req.body)); } catch (e) { fail(res, e); }
 });
 // Reprovar (PUT)
-app.put(`${P}/purchase-orders/:id/disapprove`, requireAppToken, async (req, res) => {
+app.put(`${P}/purchase-orders/:id/disapprove`, requireApprover, async (req, res) => {
   try { res.json(await sienge("PUT", `/purchase-orders/${req.params.id}/disapprove`)); } catch (e) { fail(res, e); }
 });
 // Reprovar com observacao (PATCH)
-app.patch(`${P}/purchase-orders/:id/disapprove`, requireAppToken, async (req, res) => {
+app.patch(`${P}/purchase-orders/:id/disapprove`, requireApprover, async (req, res) => {
   try { res.json(await sienge("PATCH", `/purchase-orders/${req.params.id}/disapprove`, req.body)); } catch (e) { fail(res, e); }
 });
 // Anexar arquivo
@@ -393,10 +411,10 @@ app.post(`${P}/purchase-requests/:id/items`, requireAppToken, async (req, res) =
   try { res.json(await sienge("POST", `/purchase-requests/${req.params.id}/items`, req.body)); } catch (e) { fail(res, e); }
 });
 // Autorizar / reprovar solicitacao inteira
-app.patch(`${P}/purchase-requests/:id/authorize`, requireAppToken, async (req, res) => {
+app.patch(`${P}/purchase-requests/:id/authorize`, requireApprover, async (req, res) => {
   try { res.json(await sienge("PATCH", `/purchase-requests/${req.params.id}/authorize`, req.body)); } catch (e) { fail(res, e); }
 });
-app.patch(`${P}/purchase-requests/:id/disapproval`, requireAppToken, async (req, res) => {
+app.patch(`${P}/purchase-requests/:id/disapproval`, requireApprover, async (req, res) => {
   try { res.json(await sienge("PATCH", `/purchase-requests/${req.params.id}/disapproval`, req.body)); } catch (e) { fail(res, e); }
 });
 

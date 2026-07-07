@@ -398,7 +398,9 @@ function App(p){
   var lg=useState([]),logLines=lg[0],setLogLines=lg[1];
   var md=useState(null),modal=md[0],setModal=md[1];
   var live = connected && cfg.baseUrl.trim()!=="";
-  var isAdmin = !!(p && p.user && p.user.role==="superadmin");
+  var myRole = (p && p.user && p.user.role) || "operador";
+  var isAdmin = myRole==="administrador";
+  var canApprove = myRole==="administrador" || myRole==="aprovador";
   // Conexao automatica: usa o mesmo endereco do site + a sessao do usuario logado.
   useEffect(function(){
     if(p && p.token){
@@ -599,10 +601,10 @@ function App(p){
                       h("span",{style:{width:6,height:6,borderRadius:6,background:s.dot}}),s.label)),
                   h("td",{style:{padding:"9px 14px",whiteSpace:"nowrap"}},
                     h("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
-                      o.status==="PENDING"?h(Fragment,null,
+                      (canApprove && o.status==="PENDING")?h(Fragment,null,
                         h("button",{className:"btn",onClick:function(){doAuthorize(o.id);},style:mini(C.green,"#fff")},"Autorizar"),
                         h("button",{className:"btn",onClick:function(){doDisapprove(o.id);},style:mini("#fff",C.red,C.red)},"Reprovar")):null,
-                      h("button",{className:"btn",onClick:function(){setModal({type:"note",order:o});},style:mini("#fff",C.steel,C.line)},"+ Obs."),
+                      canApprove?h("button",{className:"btn",onClick:function(){setModal({type:"note",order:o});},style:mini("#fff",C.steel,C.line)},"+ Obs."):null,
                       h("button",{className:"btn",onClick:function(){setModal({type:"attach",order:o});},style:mini("#fff",C.steel,C.line)},"Anexo"),
                       h("button",{className:"btn",onClick:function(){setModal({type:"eval",order:o});},style:mini("#fff",C.steel,C.line)},"Avaliar"),
                       live?h("a",{href:pdfUrl(o),target:"_blank",rel:"noopener",className:"btn",style:assign({},mini("#fff",C.orange,C.orange),{textDecoration:"none",display:"inline-flex",alignItems:"center"})},"PDF"):null))),
@@ -696,7 +698,8 @@ function Users(p){
   var ls=useState(true),loading=ls[0],setLoading=ls[1];
   var er=useState(""),err=er[0],setErr=er[1];
   var ok=useState(""),okMsg=ok[0],setOk=ok[1];
-  var ns=useState({fullName:"",email:"",password:"",permissions:[],admin:false}),nu=ns[0],setNu=ns[1];
+  var ns=useState({fullName:"",email:"",password:"",permissions:[],role:"operador"}),nu=ns[0],setNu=ns[1];
+  var PROFILES=[["administrador","Administrador — acesso total"],["aprovador","Aprovador — cadastra e aprova"],["operador","Operador — cadastra, nao aprova"]];
   function authFetch(pathU,opts){ opts=opts||{}; opts.headers=assign({"Content-Type":"application/json",Authorization:"Bearer "+p.token},opts.headers||{}); return fetch(pathU,opts).then(function(r){ return r.text().then(function(t){ var d=null; try{d=t?JSON.parse(t):null;}catch(e){} if(!r.ok) throw new Error((d&&d.error)||("Erro "+r.status)); return d; }); }); }
   function reload(){ setLoading(true); authFetch("/api/admin/users").then(function(d){ setList(d||[]); setErr(""); }).catch(function(e){ setErr(e.message); }).then(function(){ setLoading(false); }); }
   useEffect(function(){ reload(); },[]);
@@ -705,8 +708,8 @@ function Users(p){
     setErr(""); setOk("");
     if(!nu.fullName.trim()||!nu.email.trim()||!nu.password){ setErr("Preencha nome, e-mail e senha"); return; }
     if(nu.password.length<6){ setErr("A senha deve ter ao menos 6 caracteres"); return; }
-    authFetch("/api/admin/users",{method:"POST",body:JSON.stringify({fullName:nu.fullName.trim(),email:nu.email.trim(),password:nu.password,role:nu.admin?"superadmin":"user",permissions:nu.permissions})})
-      .then(function(){ setNu({fullName:"",email:"",password:"",permissions:[],admin:false}); setOk("Usuario criado!"); reload(); })
+    authFetch("/api/admin/users",{method:"POST",body:JSON.stringify({fullName:nu.fullName.trim(),email:nu.email.trim(),password:nu.password,role:nu.role,permissions:nu.permissions})})
+      .then(function(){ setNu({fullName:"",email:"",password:"",permissions:[],role:"operador"}); setOk("Usuario criado!"); reload(); })
       .catch(function(e){ setErr(e.message); });
   }
   function saveUser(u){ authFetch("/api/admin/users/"+u.id,{method:"PATCH",body:JSON.stringify({permissions:u.permissions,role:u.role})}).then(function(){ setOk("Permissoes salvas para "+u.email); reload(); }).catch(function(e){ setErr(e.message); }); }
@@ -723,32 +726,34 @@ function Users(p){
       h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12}},
         h(Field,{label:"Nome completo"}, h("input",{value:nu.fullName,onChange:function(e){setNu(assign({},nu,{fullName:e.target.value}));},placeholder:"Nome",style:inp})),
         h(Field,{label:"E-mail"}, h("input",{value:nu.email,onChange:function(e){setNu(assign({},nu,{email:e.target.value}));},type:"email",placeholder:"email@empresa.com",style:inp})),
-        h(Field,{label:"Senha"}, h("input",{value:nu.password,onChange:function(e){setNu(assign({},nu,{password:e.target.value}));},type:"password",placeholder:"minimo 6 caracteres",style:inp}))),
+        h(Field,{label:"Senha"}, h("input",{value:nu.password,onChange:function(e){setNu(assign({},nu,{password:e.target.value}));},type:"password",placeholder:"minimo 6 caracteres",style:inp})),
+        h(Field,{label:"Perfil de acesso"}, h("select",{value:nu.role,onChange:function(e){setNu(assign({},nu,{role:e.target.value}));},style:inp}, PROFILES.map(function(pr){return h("option",{key:pr[0],value:pr[0]},pr[1]);})))),
       h("div",{style:{marginTop:12}},
-        h("div",{style:{fontSize:12,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.4,marginBottom:6}},"Permissoes de acesso"),
+        h("div",{style:{fontSize:12,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.4,marginBottom:6}},"Modulos que pode acessar"),
         h("div",{style:{display:"flex",flexWrap:"wrap"}},
-          USER_MODULES.map(function(m){return h("label",{key:m[0],style:chk},
-            h("input",{type:"checkbox",checked:nu.admin||nu.permissions.indexOf(m[0])!==-1,disabled:nu.admin,onChange:function(){setNu(assign({},nu,{permissions:toggle(nu.permissions,m[0])}));}}),m[1]);})),
-        h("label",{style:assign({},chk,{marginTop:6,fontWeight:600,color:C.orange})},
-          h("input",{type:"checkbox",checked:nu.admin,onChange:function(){setNu(assign({},nu,{admin:!nu.admin}));}}),"Administrador (acesso total)")),
+          USER_MODULES.map(function(m){var admP=nu.role==="administrador";return h("label",{key:m[0],style:chk},
+            h("input",{type:"checkbox",checked:admP||nu.permissions.indexOf(m[0])!==-1,disabled:admP,onChange:function(){setNu(assign({},nu,{permissions:toggle(nu.permissions,m[0])}));}}),m[1]);}),
+          nu.role==="administrador"?h("span",{style:{fontSize:12,color:C.muted}},"(administrador ja acessa tudo)"):null)),
       h("button",{className:"btn",onClick:createUser,style:{marginTop:14,background:C.orange,color:"#fff",padding:"11px 18px",borderRadius:8,fontSize:14.5}},"Criar usuario")),
     h("div",{style:{fontWeight:700,fontSize:15,margin:"22px 0 10px"}},"Usuarios cadastrados"),
     loading?h("div",{style:{color:C.muted,fontSize:14}},"Carregando..."):
     h("div",{style:{display:"flex",flexDirection:"column",gap:10}},
-      list.map(function(u){ var adm=u.role==="superadmin"; return h("div",{key:u.id,style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,padding:"14px 16px"}},
+      list.map(function(u){ var adm=u.role==="administrador"; var prof=(PROFILES.filter(function(pr){return pr[0]===u.role;})[0]||["",u.role])[0]; return h("div",{key:u.id,style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,padding:"14px 16px"}},
         h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}},
           h("div",null,
             h("span",{style:{fontWeight:700}},u.fullName||"(sem nome)"),
             h("span",{style:{color:C.muted,fontSize:13,marginLeft:8}},u.email),
-            adm?h("span",{style:{marginLeft:8,fontSize:11,fontWeight:700,color:C.orange,background:C.amberBg,padding:"2px 8px",borderRadius:20}},"ADMIN"):null),
+            h("span",{style:{marginLeft:8,fontSize:11,fontWeight:700,color:adm?C.orange:C.steel,background:adm?C.amberBg:"#eef2f6",padding:"2px 8px",borderRadius:20,textTransform:"capitalize"}},u.role)),
           h("div",{style:{display:"flex",gap:8}},
             h("button",{className:"btn",onClick:function(){saveUser(u);},style:mini(C.green,"#fff")},"Salvar"),
             h("button",{className:"btn",onClick:function(){delUser(u);},style:mini("#fff",C.red,C.red)},"Excluir"))),
+        h("div",{style:{display:"flex",alignItems:"center",gap:8,marginTop:10,flexWrap:"wrap"}},
+          h("span",{style:{fontSize:12,fontWeight:600,color:C.muted}},"Perfil:"),
+          h("select",{value:u.role,onChange:function(e){localRole(u.id,e.target.value);},style:assign({},inp,{width:"auto",padding:"6px 10px",fontSize:13})}, PROFILES.map(function(pr){return h("option",{key:pr[0],value:pr[0]},pr[1]);}))),
         h("div",{style:{display:"flex",flexWrap:"wrap",marginTop:10}},
           USER_MODULES.map(function(m){return h("label",{key:m[0],style:chk},
             h("input",{type:"checkbox",checked:adm||(u.permissions||[]).indexOf(m[0])!==-1,disabled:adm,onChange:function(){localPerm(u.id,m[0]);}}),m[1]);}),
-          h("label",{style:assign({},chk,{fontWeight:600,color:C.orange})},
-            h("input",{type:"checkbox",checked:adm,onChange:function(){localRole(u.id,adm?"user":"superadmin");}}),"Administrador"))); })));
+          adm?h("span",{style:{fontSize:12,color:C.muted}},"(administrador acessa tudo)"):null)); })));
 }
 
 function Root(){
