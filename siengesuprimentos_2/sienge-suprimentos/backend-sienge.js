@@ -120,6 +120,8 @@ app.get(`${AP}/me`, (req, res) => {
   if (!d) return res.status(401).json({ error: "Nao autenticado" });
   res.json({ id: d.id, email: d.email });
 });
+// Informa se o login esta ativo (so exige acesso quando o banco esta configurado).
+app.get(`${AP}/enabled`, (req, res) => res.json({ enabled: !!pool }));
 
 const SIENGE_BASE = `https://api.sienge.com.br/${SIENGE_SUBDOMAIN}/public/api/v1`;
 const SIENGE_AUTH = "Basic " + Buffer.from(`${SIENGE_USER}:${SIENGE_PASSWORD}`).toString("base64");

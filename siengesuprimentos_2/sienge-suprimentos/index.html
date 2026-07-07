@@ -683,10 +683,13 @@ function Auth(p){
 
 function Root(){
   var as=useState(function(){ try{ return JSON.parse(localStorage.getItem("sienge_auth")||"null"); }catch(e){ return null; } }),auth=as[0],setAuth=as[1];
+  var gs=useState(null),gate=gs[0],setGate=gs[1]; // null=carregando, true=exige login, false=aberto (banco nao configurado)
+  useEffect(function(){ fetch("/api/auth/enabled").then(function(r){return r.json();}).then(function(d){ setGate(!!(d&&d.enabled)); }).catch(function(){ setGate(false); }); },[]);
   function onAuth(d){ try{ localStorage.setItem("sienge_auth",JSON.stringify(d)); }catch(e){} setAuth(d); }
   function onLogout(){ try{ localStorage.removeItem("sienge_auth"); }catch(e){} setAuth(null); }
-  if(!auth||!auth.token) return h(Auth,{onAuth:onAuth});
-  return h(App,{user:auth.user,onLogout:onLogout});
+  if(gate===null) return h("div",{style:{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",color:C.muted,fontFamily:F,fontSize:15}},"Carregando...");
+  if(gate && (!auth||!auth.token)) return h(Auth,{onAuth:onAuth});
+  return h(App,{user:(auth&&auth.user)||null,onLogout:gate?onLogout:null});
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(h(Root));
