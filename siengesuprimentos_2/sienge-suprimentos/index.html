@@ -398,6 +398,14 @@ function App(p){
   var lg=useState([]),logLines=lg[0],setLogLines=lg[1];
   var md=useState(null),modal=md[0],setModal=md[1];
   var live = connected && cfg.baseUrl.trim()!=="";
+  var isAdmin = !!(p && p.user && p.user.role==="superadmin");
+  // Conexao automatica: usa o mesmo endereco do site + a sessao do usuario logado.
+  useEffect(function(){
+    if(p && p.token){
+      setCfg({baseUrl: window.location.origin + "/api/sienge", token: p.token});
+      setConnected(true);
+    }
+  },[]);
 
   var log = useCallback(function(line){ setLogLines(function(p){return [{t:new Date().toLocaleTimeString("pt-BR"),line:line}].concat(p).slice(0,40);}); },[]);
   var notify = useCallback(function(m){ setToast(m); setTimeout(function(){setToast(null);},3600); },[]);
@@ -552,7 +560,8 @@ function App(p){
   }
 
   var counts = useMemo(function(){ var c={PENDING:0,QUOTING:0,AUTHORIZED:0,total:0}; orders.forEach(function(o){ c.total+=o.value||0; if(c[o.status]!=null)c[o.status]++; }); return c; },[orders]);
-  var NAV=[["orders","Pedidos"],["new","Nova Solicitacao"],["stock","Estoque"],["nfes","Notas Fiscais"],["flow","Fluxo"],["endpoints","Endpoints"],["connect","Conexao"]];
+  var NAV=[["orders","Pedidos"],["new","Nova Solicitacao"],["stock","Estoque"],["nfes","Notas Fiscais"],["flow","Fluxo"],["endpoints","Endpoints"]];
+  if(isAdmin) NAV.push(["connect","Conexao"]);
 
   var ordersView = h("div",{className:"fade"},
     h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:20}},
@@ -602,7 +611,10 @@ function App(p){
             orders.length===0?h("tr",null,h("td",{colSpan:8,style:{padding:30,textAlign:"center",color:C.muted}},"Nenhum pedido.")):null)))));
 
   var connectView = h("div",{className:"fade",style:{maxWidth:720}},
-    h(H,{title:"Conexao com a API do Sienge",sub:"A API do Sienge nao pode ser chamada direto do navegador (CORS + credenciais). Configure a URL do seu backend (BFF), que faz a ponte segura com o Sienge."}),
+    h(H,{title:"Conexao com a API do Sienge",sub:"Conexao automatica: o sistema ja usa o proprio servidor e a sua sessao de login. Esta aba (so para administradores) serve para conferir/ajustar."}),
+    h("div",{style:{marginTop:14,background:C.greenBg,border:"1px solid #bfe6cf",borderRadius:10,padding:"12px 14px",fontSize:13.5,color:"#1a6b3d",display:"flex",alignItems:"center",gap:8}},
+      h("span",{style:{width:8,height:8,borderRadius:8,background:C.green}}),
+      "Conectado automaticamente ao Sienge. Os usuarios nao precisam informar URL nem token."),
     h("div",{style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,padding:20,marginTop:16}},
       h(Field,{label:"URL do seu backend (BFF)",hint:"Ex.: https://meu-backend.onrender.com/api/sienge"}, h("input",{value:cfg.baseUrl,onChange:function(e){setCfg(assign({},cfg,{baseUrl:e.target.value}));},placeholder:"https://...",style:inp})),
       h(Field,{label:"Token de acesso do seu backend (opcional)",hint:"Enviado como Authorization: Bearer. Nunca coloque a credencial do Sienge aqui."}, h("input",{value:cfg.token,onChange:function(e){setCfg(assign({},cfg,{token:e.target.value}));},placeholder:"seu-token-do-app",style:inp,type:"password"})),
@@ -623,7 +635,7 @@ function App(p){
   else if(tab==="nfes") content=h(NFes,{nfes:nfes,onReload:loadNfes,live:live});
   else if(tab==="flow") content=h(Flow,null);
   else if(tab==="endpoints") content=h(Endpoints,null);
-  else content=connectView;
+  else content = isAdmin ? connectView : ordersView;
 
   return h("div",{style:{minHeight:"100vh",background:C.bg,color:C.ink,fontFamily:F}},
     h("div",{style:{background:C.steel,color:"#fff",padding:"0 18px",height:52,display:"flex",alignItems:"center",justifyContent:"space-between"}},
@@ -689,7 +701,7 @@ function Root(){
   function onLogout(){ try{ localStorage.removeItem("sienge_auth"); }catch(e){} setAuth(null); }
   if(gate===null) return h("div",{style:{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",color:C.muted,fontFamily:F,fontSize:15}},"Carregando...");
   if(gate && (!auth||!auth.token)) return h(Auth,{onAuth:onAuth});
-  return h(App,{user:(auth&&auth.user)||null,onLogout:gate?onLogout:null});
+  return h(App,{user:(auth&&auth.user)||null,token:(auth&&auth.token)||null,onLogout:gate?onLogout:null});
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(h(Root));

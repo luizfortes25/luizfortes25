@@ -155,8 +155,11 @@ function withinRateLimit() {
 // ---- autentica o APP (nao o Sienge) ----
 function requireAppToken(req, res, next) {
   if (!APP_TOKEN) return next();
-  if ((req.headers.authorization || "") === `Bearer ${APP_TOKEN}`) return next();
-  return res.status(401).json({ error: "Token do app invalido" });
+  const auth = req.headers.authorization || "";
+  const tok = auth.replace("Bearer ", "");
+  if (auth === `Bearer ${APP_TOKEN}`) return next();   // token fixo do app
+  if (verifySessionToken(tok)) return next();          // usuario logado (sessao)
+  return res.status(401).json({ error: "Nao autorizado" });
 }
 
 // ---- chamada generica ao Sienge ----
@@ -235,7 +238,7 @@ app.get(`${P}/purchase-orders/:id/totalization`, requireAppToken, async (req, re
 // Aceita o token pela URL (?token=...) para abrir direto no navegador.
 function debugAuth(req, res, next) {
   const t = req.query.token || (req.headers.authorization || "").replace("Bearer ", "");
-  if (!APP_TOKEN || t === APP_TOKEN) return next();
+  if (!APP_TOKEN || t === APP_TOKEN || verifySessionToken(t)) return next();
   return res.status(401).json({ error: "Token do app invalido" });
 }
 app.get(`${P}/_raw/*`, debugAuth, async (req, res) => {
