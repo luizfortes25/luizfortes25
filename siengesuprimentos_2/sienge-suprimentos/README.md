@@ -76,3 +76,35 @@ Parâmetros sempre enviados na **criação de Solicitação de Compra** (`POST /
 - **`categoryId` = 1** (categoria fixa, definida pela empresa).
 
 > O solicitante (`createdBy` / `requesterUser`) deve ser um **login de usuário válido cadastrado no Sienge**.
+
+---
+
+## Regras de conexão da API (instruções gravadas)
+
+**Arquitetura:** Navegador (site) → Backend BFF (Render) → API REST do Sienge.
+O navegador **nunca** fala direto com o Sienge — o backend guarda as credenciais e faz a ponte segura.
+
+**Hospedagem (Render):**
+- Serviço: `sienge-suprimentos`
+- URL pública: `https://sienge-suprimentos.onrender.com`
+- Deploy automático a partir da branch conectada (via `render.yaml`).
+
+**Como conectar (aba "Conexão" do site):**
+- **URL do backend:** `https://sienge-suprimentos.onrender.com/api/sienge`
+- **Token:** o mesmo valor de `APP_TOKEN` configurado no Render.
+
+**Variáveis de ambiente (configuradas no painel do Render — NÃO ficam no repositório):**
+
+| Variável | Descrição |
+|----------|-----------|
+| `SIENGE_SUBDOMAIN` | `macedofortes` (subdomínio da empresa) |
+| `SIENGE_USER` | usuário da API do Sienge (secreto) |
+| `SIENGE_PASSWORD` | senha da API do Sienge (secreto) |
+| `APP_TOKEN` | token que o site usa para autenticar no backend (secreto) |
+
+**Base da API do Sienge:** `https://api.sienge.com.br/macedofortes/public/api/v1`
+**Autenticação no Sienge:** HTTP Basic (`SIENGE_USER` : `SIENGE_PASSWORD`), montada no backend.
+**Autenticação do site no backend:** header `Authorization: Bearer <APP_TOKEN>`.
+**Limite:** rate limit local de 180 requisições/min (teto da API REST do Sienge é 200/min).
+
+> 🔒 **Segurança:** nunca comitar `SIENGE_USER`, `SIENGE_PASSWORD` ou `APP_TOKEN` no repositório (ele pode ser público). Esses valores vivem apenas no painel do Render e no `.env` local (que está no `.gitignore`).
