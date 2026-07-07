@@ -31,3 +31,10 @@ services:
         fromDatabase:
           name: sienge-db
           property: connectionString
+      # Super-admin (criado/garantido na inicializacao). Senha e secreta.
+      - key: ADMIN_NAME
+        value: Luiz
+      - key: ADMIN_EMAIL
+        value: luiz
+      - key: ADMIN_PASSWORD
+        sync: false

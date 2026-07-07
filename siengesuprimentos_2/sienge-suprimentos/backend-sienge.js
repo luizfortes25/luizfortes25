@@ -44,13 +44,29 @@ if (DATABASE_URL) {
   try {
     const { Pool } = require("pg");
     pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
-    pool.query(`CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      full_name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT now()
-    )`).then(() => console.log("Tabela 'users' pronta.")).catch((e) => console.error("Erro ao criar tabela users:", e.message));
+    (async () => {
+      await pool.query(`CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        full_name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
+        created_at TIMESTAMPTZ DEFAULT now()
+      )`);
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'`);
+      // Garante o super-admin a partir das variaveis de ambiente (senha nunca fica no codigo).
+      const { ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
+      if (ADMIN_EMAIL && ADMIN_PASSWORD) {
+        const adminLogin = String(ADMIN_EMAIL).toLowerCase().trim();
+        await pool.query(
+          `INSERT INTO users(full_name, email, password_hash, role) VALUES($1,$2,$3,'superadmin')
+           ON CONFLICT (email) DO UPDATE SET password_hash=EXCLUDED.password_hash, full_name=EXCLUDED.full_name, role='superadmin'`,
+          [String(ADMIN_NAME || "Administrador"), adminLogin, hashPassword(String(ADMIN_PASSWORD))]
+        );
+        console.log("Super-admin garantido:", adminLogin);
+      }
+      console.log("Banco pronto.");
+    })().catch((e) => console.error("Erro ao inicializar o banco:", e.message));
   } catch (e) { console.error("Falha ao iniciar o banco (pg):", e.message); }
 }
 
@@ -71,7 +87,7 @@ function verifyPassword(pw, stored) {
 // ---- token de sessao assinado (stateless) ----
 const SESSION_SECRET = APP_TOKEN || "sienge-session-secret";
 function makeSessionToken(user) {
-  const payload = Buffer.from(JSON.stringify({ id: user.id, email: user.email, exp: Date.now() + 7 * 24 * 3600 * 1000 })).toString("base64");
+  const payload = Buffer.from(JSON.stringify({ id: user.id, email: user.email, role: user.role || "user", exp: Date.now() + 7 * 24 * 3600 * 1000 })).toString("base64");
   const sig = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("hex");
   return payload + "." + sig;
 }
@@ -93,11 +109,11 @@ app.post(`${AP}/register`, async (req, res) => {
     if (!fullName || !email || !password) return res.status(400).json({ error: "Preencha nome, e-mail e senha" });
     if (password.length < 6) return res.status(400).json({ error: "A senha deve ter ao menos 6 caracteres" });
     const r = await pool.query(
-      "INSERT INTO users(full_name, email, password_hash) VALUES($1,$2,$3) RETURNING id, full_name, email",
+      "INSERT INTO users(full_name, email, password_hash) VALUES($1,$2,$3) RETURNING id, full_name, email, role",
       [fullName, email, hashPassword(password)]
     );
     const u = r.rows[0];
-    res.json({ token: makeSessionToken(u), user: { id: u.id, fullName: u.full_name, email: u.email } });
+    res.json({ token: makeSessionToken(u), user: { id: u.id, fullName: u.full_name, email: u.email, role: u.role } });
   } catch (e) {
     if (e.code === "23505") return res.status(409).json({ error: "Este e-mail ja esta cadastrado" });
     console.error(e); res.status(500).json({ error: "Erro ao cadastrar" });
@@ -112,7 +128,7 @@ app.post(`${AP}/login`, async (req, res) => {
     const r = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
     if (!r.rows.length || !verifyPassword(password, r.rows[0].password_hash)) return res.status(401).json({ error: "E-mail ou senha invalidos" });
     const u = r.rows[0];
-    res.json({ token: makeSessionToken(u), user: { id: u.id, fullName: u.full_name, email: u.email } });
+    res.json({ token: makeSessionToken(u), user: { id: u.id, fullName: u.full_name, email: u.email, role: u.role } });
   } catch (e) { console.error(e); res.status(500).json({ error: "Erro ao entrar" }); }
 });
 app.get(`${AP}/me`, (req, res) => {

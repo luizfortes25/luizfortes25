@@ -672,7 +672,7 @@ function Auth(p){
         h("div",{style:{fontWeight:800,fontSize:19,color:C.ink}},"Sienge Suprimentos")),
       h("div",{style:{color:C.muted,fontSize:14,marginBottom:20}}, mode==="register"?"Crie sua conta de acesso":"Entre na sua conta"),
       mode==="register"?h(Field,{label:"Nome completo"}, h("input",{value:name,onChange:function(e){setName(e.target.value);},onKeyDown:onKey,placeholder:"Seu nome completo",style:inp})):null,
-      h(Field,{label:"E-mail"}, h("input",{value:email,onChange:function(e){setEmail(e.target.value);},onKeyDown:onKey,type:"email",placeholder:"voce@email.com",style:inp})),
+      h(Field,{label:mode==="register"?"E-mail":"E-mail ou usuario"}, h("input",{value:email,onChange:function(e){setEmail(e.target.value);},onKeyDown:onKey,type:mode==="register"?"email":"text",placeholder:mode==="register"?"voce@email.com":"e-mail ou usuario",style:inp})),
       h(Field,{label:"Senha"}, h("input",{value:pass,onChange:function(e){setPass(e.target.value);},onKeyDown:onKey,type:"password",placeholder:"minimo 6 caracteres",style:inp})),
       err?h("div",{style:{color:C.red,fontSize:13,margin:"2px 0 2px"}},err):null,
       h("button",{className:"btn",onClick:submit,disabled:loading,style:{marginTop:14,width:"100%",background:C.orange,color:"#fff",padding:"12px",borderRadius:8,fontSize:15,opacity:loading?.7:1}}, loading?"Aguarde...":(mode==="register"?"Cadastrar":"Entrar")),
