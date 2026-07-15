@@ -2,11 +2,10 @@
 # No Render: New + -> Blueprint -> selecione este repositorio.
 # O Render le este arquivo e configura tudo sozinho.
 # Voce so digita os valores marcados como "sync: false" (secretos) no painel.
-# Banco de dados PostgreSQL gratuito (guarda os usuarios cadastrados).
-databases:
-  - name: sienge-db
-    plan: free
-
+#
+# BANCO DE DADOS: usamos um PostgreSQL gratuito e PERMANENTE do Neon
+# (https://neon.tech). A conexao vai na variavel DATABASE_URL (secreta),
+# preenchida no painel do Render com a string de conexao do Neon.
 services:
   - type: web
     name: sienge-suprimentos
@@ -26,11 +25,9 @@ services:
         sync: false
       - key: APP_TOKEN
         sync: false
-      # Conexao com o banco — injetada automaticamente pelo Render:
+      # Conexao com o banco Neon (string de conexao colada no painel do Render):
       - key: DATABASE_URL
-        fromDatabase:
-          name: sienge-db
-          property: connectionString
+        sync: false
       # Super-admin (criado/garantido na inicializacao). Senha e secreta.
       - key: ADMIN_NAME
         value: Luiz
