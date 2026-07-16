@@ -3,9 +3,12 @@
 # O Render le este arquivo e configura tudo sozinho.
 # Voce so digita os valores marcados como "sync: false" (secretos) no painel.
 #
-# BANCO DE DADOS: usamos um PostgreSQL gratuito e PERMANENTE do Neon
-# (https://neon.tech). A conexao vai na variavel DATABASE_URL (secreta),
-# preenchida no painel do Render com a string de conexao do Neon.
+# BANCO DE DADOS: PostgreSQL do Render em plano pago (basic-256mb),
+# sem prazo de expiracao. Guarda os usuarios cadastrados.
+databases:
+  - name: sienge-db
+    plan: basic-256mb
+
 services:
   - type: web
     name: sienge-suprimentos
@@ -25,9 +28,11 @@ services:
         sync: false
       - key: APP_TOKEN
         sync: false
-      # Conexao com o banco Neon (string de conexao colada no painel do Render):
+      # Conexao com o banco — injetada automaticamente pelo Render:
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: sienge-db
+          property: connectionString
       # Super-admin (criado/garantido na inicializacao). Senha e secreta.
       - key: ADMIN_NAME
         value: Luiz
