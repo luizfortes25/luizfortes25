@@ -405,6 +405,9 @@ function Contracts(p){
   var ls=useState(false),loading=ls[0],setLoading=ls[1];
   var me=useState(""),merr=me[0],setMerr=me[1];
   var fl=useState("all"),filt=fl[0],setFilt=fl[1];
+  var pn=useState(null),pending=pn[0],setPending=pn[1];
+  var pl=useState(false),ploading=pl[0],setPloading=pl[1];
+  function loadPending(){ if(!p.live)return; setPloading(true); p.api("GET","/supply-contracts/pending-auth").then(function(d){ setPending((d&&d.pending)||[]); }).catch(function(e){ p.notify("Falha ao buscar pendentes: "+e.message); }).then(function(){ setPloading(false); }); }
   function load(kind){
     if(!p.live){ p.notify("Conecte ao Sienge"); return; }
     setLoading(true);
@@ -438,8 +441,11 @@ function Contracts(p){
             rows.length===0?h("tr",null,h("td",{colSpan:cols.length,style:{padding:26,textAlign:"center",color:C.muted}},loading?"Carregando...":"Nenhum registro.")):null))));
   }
   function applyFilter(rows){ return filt==="all"?rows:rows.filter(function(x){ return filt==="auth"?isAuth(x):!isAuth(x); }); }
-  function chip(k,label){ return h("button",{className:"btn",onClick:function(){setFilt(k);},style:{padding:"6px 13px",borderRadius:20,fontSize:12.5,fontWeight:600,border:"1px solid "+(filt===k?C.orange:C.line),background:filt===k?C.orange:"#fff",color:filt===k?"#fff":C.muted}},label); }
-  var fcontracts=applyFilter(contracts), fmeas=applyFilter(measurements);
+  function chip(k,label){ return h("button",{className:"btn",onClick:function(){ setFilt(k); if(k==="pending"&&pending===null&&sub==="contracts") loadPending(); },style:{padding:"6px 13px",borderRadius:20,fontSize:12.5,fontWeight:600,border:"1px solid "+(filt===k?C.orange:C.line),background:filt===k?C.orange:"#fff",color:filt===k?"#fff":C.muted}},label); }
+  var pendingMode = (sub==="contracts" && filt==="pending");
+  var fcontracts = pendingMode ? (pending||[]) : applyFilter(contracts);
+  var fmeas=applyFilter(measurements);
+  var countLabel = sub==="contracts" ? (pendingMode ? (pending?pending.length:"...") : fcontracts.length) : fmeas.length;
   return h("div",{className:"fade"},
     h(H,{title:"Contratos de Fornecimento",sub:p.live?"Dados ao vivo via /supply-contracts":"Conecte na aba Conexao"}),
     h("div",{style:{display:"flex",gap:8,margin:"16px 0 12px",flexWrap:"wrap"}},
@@ -449,7 +455,12 @@ function Contracts(p){
     h("div",{style:{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}},
       h("span",{style:{fontSize:12.5,color:C.muted,fontWeight:600,marginRight:2}},"Filtrar:"),
       chip("all","Todos"), chip("auth","Autorizados"), chip("pending","Nao autorizados"),
-      h("span",{style:{fontSize:12.5,color:C.muted,marginLeft:6}},(sub==="contracts"?fcontracts.length:fmeas.length)+" registro(s)")),
+      pendingMode?h("button",{className:"btn",onClick:loadPending,style:{background:"transparent",color:C.orange,fontSize:12.5,fontWeight:600,padding:0,marginLeft:2}},"atualizar"):null,
+      h("span",{style:{fontSize:12.5,color:C.muted,marginLeft:6}},countLabel+" registro(s)")),
+    (pendingMode && (ploading || pending===null))?
+      h("div",{style:{padding:"28px 14px",textAlign:"center",color:C.muted,fontSize:14}},
+        h("div",{style:{width:16,height:16,border:"2px solid "+C.line,borderTopColor:C.orange,borderRadius:16,animation:"spin .7s linear infinite",display:"inline-block",marginBottom:8}}),
+        h("div",null,"Buscando contratos pendentes em todas as paginas do Sienge... (pode levar alguns segundos)")):
     sub==="contracts"?tbl("contracts",fcontracts,["No","Fornecedor / Obra","Valor","Status","Acao"]):
       (merr?h("div",{style:{background:C.amberBg,border:"1px solid #f0d9a0",borderRadius:10,padding:"14px 16px",color:"#7a5a00",fontSize:14}},merr):tbl("measurements",fmeas,["No","Contrato","Valor","Status","Acao"])));
 }
