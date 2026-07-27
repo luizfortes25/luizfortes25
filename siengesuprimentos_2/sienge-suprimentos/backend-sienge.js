@@ -497,19 +497,19 @@ app.post(`${P}/stock-movements/transfer`, requireAppToken, async (req, res) => {
 app.get(`${P}/supply-contracts/all`, requireAppToken, async (req, res) => {
   try { const qs = new URLSearchParams(req.query).toString(); res.json(await sienge("GET", `/supply-contracts/all${qs ? "?" + qs : ""}`)); } catch (e) { fail(res, e); }
 });
-// Varre todas as paginas e retorna apenas contratos PENDENTES de autorizacao.
+// Retorna contratos AGUARDANDO AUTORIZACAO usando o filtro oficial do Sienge
+// (authorization=N). Ignora contratos com valor zero.
 app.get(`${P}/supply-contracts/pending-auth`, requireAppToken, async (req, res) => {
   try {
     const limit = 200; let offset = 0, count = Infinity, pages = 0; const pending = [];
     while (offset < count && pages < 80) {
-      const data = await sienge("GET", `/supply-contracts/all?limit=${limit}&offset=${offset}`);
+      const data = await sienge("GET", `/supply-contracts/all?authorization=N&limit=${limit}&offset=${offset}`);
       const results = (data && data.results) || (Array.isArray(data) ? data : []);
       const meta = data && data.resultSetMetadata;
       count = meta && meta.count != null ? meta.count : results.length;
       for (const c of results) {
-        const reprovado = /DISAPPROV|REPROV|REJECT/i.test(String(c.statusApproval || "")) || (Array.isArray(c.disapprovalReason) && c.disapprovalReason.length > 0);
         const valor = (Number(c.totalLaborValue) || 0) + (Number(c.totalMaterialValue) || 0);
-        if (c.isAuthorized !== true && !reprovado && valor > 0) pending.push(c);
+        if (valor > 0) pending.push(c);
       }
       pages++; offset += limit;
       if (!results.length) break;
