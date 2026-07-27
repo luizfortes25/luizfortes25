@@ -518,19 +518,25 @@ app.get(`${P}/supply-contracts/find`, debugAuth, async (req, res) => {
     res.json({ query: q, found });
   } catch (e) { fail(res, e); }
 });
-// Retorna contratos AGUARDANDO AUTORIZACAO usando o filtro oficial do Sienge
-// (authorization=N). Ignora contratos com valor zero.
+// Contratos a autorizar, conforme criterios:
+//  - Situacao (status) em {PENDING, PARTIALLY_MEASURED}
+//  - Aguardando autorizacao (isAuthorized=false e nao reprovado)
+//  - Exclui reprovados (statusApproval=DISAPPROVED / disapprovalReason) e valor zero
+const SITUACOES = ["PENDING", "PARTIALLY_MEASURED"];
 app.get(`${P}/supply-contracts/pending-auth`, requireAppToken, async (req, res) => {
   try {
     const limit = 200; let offset = 0, count = Infinity, pages = 0; const pending = [];
     while (offset < count && pages < 80) {
-      const data = await sienge("GET", `/supply-contracts/all?authorization=N&limit=${limit}&offset=${offset}`);
+      const data = await sienge("GET", `/supply-contracts/all?limit=${limit}&offset=${offset}`);
       const results = (data && data.results) || (Array.isArray(data) ? data : []);
       const meta = data && data.resultSetMetadata;
       count = meta && meta.count != null ? meta.count : results.length;
       for (const c of results) {
+        const situacaoOk = SITUACOES.indexOf(String(c.status || "").toUpperCase()) !== -1;
+        const sa = String(c.statusApproval || "").toUpperCase();
+        const reprovado = sa === "D" || /DISAPPROV|REPROV|REJECT/.test(sa) || (Array.isArray(c.disapprovalReason) && c.disapprovalReason.length > 0);
         const valor = (Number(c.totalLaborValue) || 0) + (Number(c.totalMaterialValue) || 0);
-        if (valor > 0) pending.push(c);
+        if (situacaoOk && c.isAuthorized !== true && !reprovado && valor > 0) pending.push(c);
       }
       pages++; offset += limit;
       if (!results.length) break;
