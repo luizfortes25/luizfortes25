@@ -458,6 +458,10 @@ app.get(`${P}/stock-movements`, requireAppToken, async (req, res) => {
 app.post(`${P}/stock-movements`, requireAppToken, async (req, res) => {
   try { res.json(await sienge("POST", `/stock-movements`, req.body)); } catch (e) { fail(res, e); }
 });
+// Transferencia de estoque entre centros de custo
+app.post(`${P}/stock-movements/transfer`, requireAppToken, async (req, res) => {
+  try { res.json(await sienge("POST", `/stock-movements/transfer`, req.body)); } catch (e) { fail(res, e); }
+});
 
 // ============================================================
 //  NOTAS FISCAIS (NF-e) — leitura
