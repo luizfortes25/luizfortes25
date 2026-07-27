@@ -471,6 +471,9 @@ function App(p){
   var cn=useState(false),connected=cn[0],setConnected=cn[1];
   var os=useState(DEMO_ORDERS),orders=os[0],setOrders=os[1];
   var exp=useState({}),expanded=exp[0],setExpanded=exp[1];
+  var of=useState("all"),orderFilt=of[0],setOrderFilt=of[1];
+  var po=useState(null),pendingOrders=po[0],setPendingOrders=po[1];
+  var pol=useState(false),poLoading=pol[0],setPoLoading=pol[1];
   var rs=useState([]),requests=rs[0],setRequests=rs[1];
   var stk=useState(DEMO_STOCK),stock=stk[0],setStock=stk[1];
   var mvs=useState(DEMO_MOVEMENTS),movements=mvs[0],setMovements=mvs[1];
@@ -523,6 +526,7 @@ function App(p){
       .catch(function(e){ notify("Falha ao carregar: "+e.message); }).then(function(){ setLoading(false); });
   },[live,api,notify]);
   useEffect(function(){ loadOrders(); },[loadOrders]);
+  function loadPendingOrders(){ if(!live)return; setPoLoading(true); api("GET","/purchase-orders/pending-auth").then(function(d){ setPendingOrders((d&&d.pending)||[]); }).catch(function(e){ notify("Falha ao buscar pendentes: "+e.message); }).then(function(){ setPoLoading(false); }); }
 
   var loadNfes = useCallback(function(dateStart,dateEnd){
     if(!live){ setNfes(DEMO_NFES); return; }
@@ -659,6 +663,9 @@ function App(p){
   var allowedTab={}; NAV.forEach(function(nv){allowedTab[nv[0]]=true;});
   var view = allowedTab[tab] ? tab : (NAV.length ? NAV[0][0] : "__none__");
 
+  var orderPending = orderFilt==="pending";
+  var shownOrders = orderPending ? (pendingOrders||[]) : (orderFilt==="all" ? orders : orders.filter(function(o){ return orderFilt==="auth"?o.status==="AUTHORIZED":orderFilt==="disapproved"?o.status==="DISAPPROVED":o.status==="PENDING"; }));
+  function ordChip(k,label){ return h("button",{className:"btn",onClick:function(){ setOrderFilt(k); if(k==="pending"&&pendingOrders===null&&live) loadPendingOrders(); },style:{padding:"6px 13px",borderRadius:20,fontSize:12.5,fontWeight:600,border:"1px solid "+(orderFilt===k?C.orange:C.line),background:orderFilt===k?C.orange:"#fff",color:orderFilt===k?"#fff":C.muted}},label); }
   var ordersView = h("div",{className:"fade"},
     h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:20}},
       h(Stat,{label:"Aguardando",value:counts.PENDING,c:C.amber}),
@@ -667,15 +674,24 @@ function App(p){
       h(Stat,{label:"Valor total",value:brl(counts.total),c:C.orange,small:true})),
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}},
       h(H,{title:"Pedidos de Compra",sub:live?"Dados ao vivo via GET /purchase-orders":"Demo - conecte um backend na aba Conexao"}),
-      h("button",{className:"btn",onClick:loadOrders,style:{background:C.panel,color:C.steel,border:"1px solid "+C.line,padding:"9px 14px",borderRadius:8,fontSize:13,display:"flex",alignItems:"center",gap:8}},
-        loading?h("span",{style:{width:12,height:12,border:"2px solid "+C.line,borderTopColor:C.orange,borderRadius:12,animation:"spin .7s linear infinite",display:"inline-block"}}):null,"Recarregar")),
+      h("button",{className:"btn",onClick:function(){ loadOrders(); if(orderPending) loadPendingOrders(); },style:{background:C.panel,color:C.steel,border:"1px solid "+C.line,padding:"9px 14px",borderRadius:8,fontSize:13,display:"flex",alignItems:"center",gap:8}},
+        (loading||poLoading)?h("span",{style:{width:12,height:12,border:"2px solid "+C.line,borderTopColor:C.orange,borderRadius:12,animation:"spin .7s linear infinite",display:"inline-block"}}):null,"Recarregar")),
+    h("div",{style:{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}},
+      h("span",{style:{fontSize:12.5,color:C.muted,fontWeight:600,marginRight:2}},"Filtrar:"),
+      ordChip("all","Todos"), ordChip("auth","Autorizados"), ordChip("pending","Pendentes de autorizacao"), ordChip("disapproved","Reprovados"),
+      orderPending?h("button",{className:"btn",onClick:loadPendingOrders,style:{background:"transparent",color:C.orange,fontSize:12.5,fontWeight:600,padding:0,marginLeft:2}},"atualizar"):null,
+      h("span",{style:{fontSize:12.5,color:C.muted,marginLeft:6}},(orderPending?(pendingOrders?pendingOrders.length:"..."):shownOrders.length)+" pedido(s)")),
+    (orderPending && (poLoading || pendingOrders===null))?
+      h("div",{style:{padding:"28px 14px",textAlign:"center",color:C.muted,fontSize:14,background:C.panel,border:"1px solid "+C.line,borderRadius:10}},
+        h("div",{style:{width:16,height:16,border:"2px solid "+C.line,borderTopColor:C.orange,borderRadius:16,animation:"spin .7s linear infinite",display:"inline-block",marginBottom:8}}),
+        h("div",null,"Buscando pedidos pendentes de autorizacao em todas as paginas... (pode levar um pouco)")):
     h("div",{style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,overflow:"hidden"}},
       h("div",{style:{overflowX:"auto"}},
         h("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:14,minWidth:820}},
           h("thead",null, h("tr",{style:{background:"#f1f4f7",textAlign:"left"}},
             ["No","Obra","Fornecedor","Itens","Entrega","Valor","Status","Acoes"].map(function(hh){return h("th",{key:hh,style:{padding:"11px 14px",fontSize:12,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.4,borderBottom:"1px solid "+C.line,whiteSpace:"nowrap"}},hh);}))),
           h("tbody",null,
-            orders.map(function(o){
+            shownOrders.map(function(o){
               var s=STATUS[o.status]||STATUS.QUOTING;
               var exo=expanded[o.id]||{};
               return h(Fragment,{key:o.id},
@@ -704,7 +720,7 @@ function App(p){
                     h("div",{style:{fontSize:11,fontWeight:700,color:C.muted,margin:"4px 0 6px",textTransform:"uppercase",letterSpacing:0.3}},"Materiais do pedido #"+o.id),
                     renderItemsBlock(exo)))):null);
             }),
-            orders.length===0?h("tr",null,h("td",{colSpan:8,style:{padding:30,textAlign:"center",color:C.muted}},"Nenhum pedido.")):null)))));
+            shownOrders.length===0?h("tr",null,h("td",{colSpan:8,style:{padding:30,textAlign:"center",color:C.muted}},"Nenhum pedido.")):null)))));
 
   var connectView = h("div",{className:"fade",style:{maxWidth:720}},
     h(H,{title:"Conexao com a API do Sienge",sub:"Conexao automatica: o sistema ja usa o proprio servidor e a sua sessao de login. Esta aba (so para administradores) serve para conferir/ajustar."}),

@@ -277,13 +277,40 @@ app.get(`${P}/purchase-orders`, requireAppToken, async (req, res) => {
       building: o.buildingName ?? o.building ?? (o.buildingId != null ? `Obra ${o.buildingId}` : "—"),
       supplier: o.supplierName ?? o.supplier ?? (o.supplierId != null ? `Forn. ${o.supplierId}` : "—"),
       value: o.totalValue ?? o.value ?? o.totalAmount ?? 0,
-      status: (o.authorized === true || o.authorizedAt) ? "AUTHORIZED"
+      status: (o.authorized === true) ? "AUTHORIZED"
               : (o.disapproved === true) ? "DISAPPROVED"
-              : mapStatus(o.consistencyStatus ?? o.authorizationStatus ?? o.status),
+              : "PENDING",
       items: o.itemsCount ?? o.items ?? 0,
       delivery: o.deliveryForecast ?? o.delivery ?? o.date ?? null,
     }));
     res.json(results);
+  } catch (e) { fail(res, e); }
+});
+// Varre todas as paginas e retorna apenas pedidos PENDENTES de autorizacao
+// (authorized=false e disapproved=false), conforme campos da API.
+app.get(`${P}/purchase-orders/pending-auth`, requireAppToken, async (req, res) => {
+  try {
+    const limit = 200; let offset = 0, count = Infinity, pages = 0; const pending = [];
+    while (offset < count && pages < 160) {
+      const data = await sienge("GET", `/purchase-orders?limit=${limit}&offset=${offset}`);
+      const results = (data && data.results) || (Array.isArray(data) ? data : []);
+      const meta = data && data.resultSetMetadata;
+      count = meta && meta.count != null ? meta.count : results.length;
+      for (const o of results) {
+        if (o.authorized !== true && o.disapproved !== true) pending.push({
+          id: o.purchaseOrderId ?? o.id,
+          building: o.buildingName ?? (o.buildingId != null ? `Obra ${o.buildingId}` : "—"),
+          supplier: o.supplierName ?? (o.supplierId != null ? `Forn. ${o.supplierId}` : "—"),
+          value: o.totalValue ?? o.value ?? o.totalAmount ?? 0,
+          status: "PENDING",
+          items: o.itemsCount ?? 0,
+          delivery: o.deliveryForecast ?? o.date ?? null,
+        });
+      }
+      pages++; offset += limit;
+      if (!results.length) break;
+    }
+    res.json({ total: count, pending });
   } catch (e) { fail(res, e); }
 });
 app.get(`${P}/purchase-orders/:id`, requireAppToken, async (req, res) => {
