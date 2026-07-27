@@ -314,22 +314,37 @@ function Stock(p){
 }
 
 function NewMovement(p){
-  var ty=useState("IN"),type=ty[0],setType=ty[1];
+  var op0=useState("IN"),op=op0[0],setOp=op0[1];
+  var mt=useState(""),mtype=mt[0],setMtype=mt[1];
+  var dc=useState(""),doc=dc[0],setDoc=dc[1];
+  var dt=useState(new Date().toISOString().slice(0,10)),date=dt[0],setDate=dt[1];
   var cc=useState(""),costCenter=cc[0],setCC=cc[1];
+  var oc=useState(""),origin=oc[0],setOrigin=oc[1];
+  var de=useState(""),dest=de[0],setDest=de[1];
   var rn=useState(""),resource=rn[0],setResource=rn[1];
   var qn=useState(""),qty=qn[0],setQty=qn[1];
   var un=useState("UN"),unit=un[0],setUnit=un[1];
-  function submit(){ if(!costCenter.trim()||!resource.trim())return; p.onCreate({type:type,costCenterId:costCenter,resource:resource,quantity:Number(qty)||1,unit:unit}); setResource("");setQty(""); }
-  return h("div",{style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,padding:20,maxWidth:620}},
-    h("div",{style:{display:"flex",gap:8,marginBottom:14}},
-      h("button",{className:"btn",onClick:function(){setType("IN");},style:{flex:1,padding:"11px",borderRadius:8,background:type==="IN"?C.green:"#fff",color:type==="IN"?"#fff":C.muted,border:"1px solid "+(type==="IN"?C.green:C.line)}},"Entrada"),
-      h("button",{className:"btn",onClick:function(){setType("OUT");},style:{flex:1,padding:"11px",borderRadius:8,background:type==="OUT"?C.red:"#fff",color:type==="OUT"?"#fff":C.muted,border:"1px solid "+(type==="OUT"?C.red:C.line)}},"Saida")),
-    h(Field,{label:"Centro de custo (costCenterId)"}, h("input",{value:costCenter,onChange:function(e){setCC(e.target.value);},placeholder:"ex.: 31",style:inp})),
-    h(Field,{label:"Insumo (resourceId)"}, h("input",{value:resource,onChange:function(e){setResource(e.target.value);},placeholder:"ex.: 1024 - Cimento CP-II",style:inp})),
+  var isTransfer = op==="TRANSFER";
+  function valid(){ if(!String(mtype).trim()||!resource.trim()||!qty.trim())return false; return isTransfer?(origin.trim()&&dest.trim()):costCenter.trim(); }
+  function submit(){ if(!valid())return; p.onCreate({op:op,movementTypeId:mtype,document:doc,date:date,costCenterId:costCenter,originCostCenterId:origin,destCostCenterId:dest,resource:resource,quantity:Number(qty)||1,unit:unit}); setResource("");setQty(""); }
+  function opBtn(k,label,color){ return h("button",{className:"btn",onClick:function(){setOp(k);},style:{flex:1,padding:"11px",borderRadius:8,background:op===k?color:"#fff",color:op===k?"#fff":C.muted,border:"1px solid "+(op===k?color:C.line),fontSize:13.5}},label); }
+  return h("div",{style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,padding:20,maxWidth:660}},
+    h("div",{style:{display:"flex",gap:8,marginBottom:16}},
+      opBtn("IN","Entrada",C.green), opBtn("OUT","Saida",C.red), opBtn("TRANSFER","Transferencia",C.blue)),
+    h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12}},
+      h(Field,{label:"Tipo de movimento (codigo)",hint:"Codigo do tipo cadastrado no Sienge"}, h("input",{value:mtype,onChange:function(e){setMtype(e.target.value);},placeholder:"ex.: 1",style:inp})),
+      h(Field,{label:"Documento"}, h("input",{value:doc,onChange:function(e){setDoc(e.target.value);},placeholder:"ex.: NF 123",style:inp})),
+      h(Field,{label:"Data"}, h("input",{type:"date",value:date,onChange:function(e){setDate(e.target.value);},style:inp}))),
+    isTransfer?
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
+        h(Field,{label:"CC origem (costCenterId)"}, h("input",{value:origin,onChange:function(e){setOrigin(e.target.value);},placeholder:"ex.: 31",style:inp})),
+        h(Field,{label:"CC destino (costCenterId)"}, h("input",{value:dest,onChange:function(e){setDest(e.target.value);},placeholder:"ex.: 45",style:inp}))):
+      h(Field,{label:"Centro de custo (costCenterId)"}, h("input",{value:costCenter,onChange:function(e){setCC(e.target.value);},placeholder:"ex.: 31",style:inp})),
+    h(Field,{label:"Insumo (resourceId)"}, h("input",{value:resource,onChange:function(e){setResource(e.target.value);},placeholder:"ex.: 1024",style:inp})),
     h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}},
       h(Field,{label:"Quantidade"}, h("input",{value:qty,onChange:function(e){setQty(e.target.value);},placeholder:"100",style:inp})),
       h(Field,{label:"Unidade"}, h("select",{value:unit,onChange:function(e){setUnit(e.target.value);},style:inp}, ["UN","KG","M","M2","M3","SC","L","CX"].map(function(u){return h("option",{key:u},u);})))),
-    h("button",{className:"btn",onClick:submit,disabled:!costCenter.trim()||!resource.trim(),style:{marginTop:8,width:"100%",background:(costCenter.trim()&&resource.trim())?C.orange:C.line,color:"#fff",padding:"12px",borderRadius:8,fontSize:15,cursor:(costCenter.trim()&&resource.trim())?"pointer":"not-allowed"}},"Registrar movimento "+(p.live?"no Sienge":"(demo)")));
+    h("button",{className:"btn",onClick:submit,disabled:!valid(),style:{marginTop:12,width:"100%",background:valid()?C.orange:C.line,color:"#fff",padding:"12px",borderRadius:8,fontSize:15,cursor:valid()?"pointer":"not-allowed"}},"Registrar "+(op==="TRANSFER"?"transferencia":op==="IN"?"entrada":"saida")+" "+(p.live?"no Sienge":"(demo)")));
 }
 
 function NFes(p){
@@ -519,9 +534,18 @@ function App(p){
     }).catch(function(e){ notify("Falha ao carregar estoque: "+e.message); }).then(function(){ setLoading(false); });
   }
   function createMovement(mv){
-    var entry={ id:"MV-"+Math.floor(3000+Math.random()*9999), type:mv.type, resource:mv.resource, qty:mv.quantity, unit:mv.unit, cc:mv.costCenterId, date:new Date().toISOString().slice(0,10) };
-    if(!live){ setMovements(function(p){return [entry].concat(p);}); log("(demo) POST /stock-movements ("+(mv.type==="IN"?"entrada":"saida")+")"); notify("Movimento registrado (demo) "+entry.id); return; }
-    api("POST","/stock-movements",{type:mv.type,costCenterId:mv.costCenterId,items:[{resourceId:mv.resource,quantity:mv.quantity,unit:mv.unit}]}).then(function(){ setMovements(function(p){return [entry].concat(p);}); notify("Movimento "+entry.id+" criado no Sienge"); }).catch(function(e){notify("Erro: "+e.message);});
+    var entry={ id:"MV-"+Math.floor(3000+Math.random()*9999), type:mv.op, resource:mv.resource, qty:mv.quantity, unit:mv.unit, cc:mv.costCenterId||mv.originCostCenterId, date:mv.date };
+    if(!live){ setMovements(function(p){return [entry].concat(p);}); log("(demo) POST /stock-movements ("+mv.op+")"); notify("Movimento registrado (demo) "+entry.id); return; }
+    var item={ resourceId:Number(mv.resource), quantity:Number(mv.quantity)||1, unitOfMeasure:mv.unit };
+    var path, body;
+    if(mv.op==="TRANSFER"){
+      path="/stock-movements/transfer";
+      body={ movementTypeId:Number(mv.movementTypeId), date:mv.date, documentNumber:mv.document, originCostCenterId:Number(mv.originCostCenterId), destinationCostCenterId:Number(mv.destCostCenterId), items:[item] };
+    } else {
+      path="/stock-movements";
+      body={ movementTypeId:Number(mv.movementTypeId), date:mv.date, documentNumber:mv.document, costCenterId:Number(mv.costCenterId), operation:(mv.op==="IN"?"IN":"OUT"), items:[item] };
+    }
+    api("POST",path,body).then(function(){ setMovements(function(p){return [entry].concat(p);}); notify("Movimento criado no Sienge"); }).catch(function(e){notify("Falha ao criar: "+e.message);});
   }
 
   function toggleItems(o){
