@@ -479,7 +479,7 @@ app.get(`${P}/supply-contracts/pending-auth`, requireAppToken, async (req, res) 
       const results = (data && data.results) || (Array.isArray(data) ? data : []);
       const meta = data && data.resultSetMetadata;
       count = meta && meta.count != null ? meta.count : results.length;
-      for (const c of results) { if (c.isAuthorized !== true && c.statusApproval !== "APPROVED") pending.push(c); }
+      for (const c of results) { if (c.isAuthorized !== true) pending.push(c); }
       pages++; offset += limit;
       if (!results.length) break;
     }

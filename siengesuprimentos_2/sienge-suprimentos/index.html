@@ -422,7 +422,7 @@ function Contracts(p){
     var body=kind==="measurements"?{measurements:[{documentId:item.documentId,contractNumber:item.contractNumber,measurementNumber:item.measurementNumber}]}:{contracts:[{documentId:item.documentId,contractNumber:item.contractNumber}]};
     p.api("PATCH",path,body).then(function(){ p.notify((kind==="measurements"?"Medicao ":"Contrato ")+ref+" autorizado"); load(kind); }).catch(function(e){ p.notify("Erro: "+e.message); });
   }
-  function isAuth(x){ return x.isAuthorized===true || x.authorized===true || x.statusApproval==="APPROVED"; }
+  function isAuth(x){ return x.isAuthorized===true || x.authorized===true; }
   function cVal(x){ var t=(Number(x.totalLaborValue)||0)+(Number(x.totalMaterialValue)||0); return t || x.totalValue || x.value || x.netValue || 0; }
   function tbl(kind,rows,cols){
     return h("div",{style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,overflow:"hidden"}},
