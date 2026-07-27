@@ -508,8 +508,10 @@ app.get(`${P}/supply-contracts/pending-auth`, requireAppToken, async (req, res) 
       const meta = data && data.resultSetMetadata;
       count = meta && meta.count != null ? meta.count : results.length;
       for (const c of results) {
+        const sa = String(c.statusApproval || "").toUpperCase();
+        const reprovado = sa === "D" || /DISAPPROV|REPROV|REJECT/.test(sa) || (Array.isArray(c.disapprovalReason) && c.disapprovalReason.length > 0);
         const valor = (Number(c.totalLaborValue) || 0) + (Number(c.totalMaterialValue) || 0);
-        if (valor > 0) pending.push(c);
+        if (!reprovado && valor > 0) pending.push(c);
       }
       pages++; offset += limit;
       if (!results.length) break;
