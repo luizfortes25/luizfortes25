@@ -37,7 +37,7 @@ app.use(express.static(__dirname));
 const { SIENGE_SUBDOMAIN, SIENGE_USER, SIENGE_PASSWORD, APP_TOKEN, DATABASE_URL, PORT = 3001 } = process.env;
 
 // Modulos de acesso que o admin pode liberar por usuario.
-const ALL_PERMS = ["orders", "new", "stock", "nfes", "flow", "endpoints"];
+const ALL_PERMS = ["orders", "new", "stock", "contracts", "nfes", "flow", "endpoints"];
 
 // Perfis de acesso.
 const ADMIN_ROLE = "administrador";
@@ -461,6 +461,32 @@ app.post(`${P}/stock-movements`, requireAppToken, async (req, res) => {
 // Transferencia de estoque entre centros de custo
 app.post(`${P}/stock-movements/transfer`, requireAppToken, async (req, res) => {
   try { res.json(await sienge("POST", `/stock-movements/transfer`, req.body)); } catch (e) { fail(res, e); }
+});
+
+// ============================================================
+//  CONTRATOS DE FORNECIMENTO e MEDICOES
+// ============================================================
+// Consulta contratos
+app.get(`${P}/supply-contracts/all`, requireAppToken, async (req, res) => {
+  try { const qs = new URLSearchParams(req.query).toString(); res.json(await sienge("GET", `/supply-contracts/all${qs ? "?" + qs : ""}`)); } catch (e) { fail(res, e); }
+});
+// Autoriza contratos (aceita PATCH e POST; so Aprovador/Admin)
+app.patch(`${P}/supply-contracts/authorize`, requireApprover, async (req, res) => {
+  try { res.json(await sienge("PATCH", `/supply-contracts/authorize`, req.body)); } catch (e) { fail(res, e); }
+});
+app.post(`${P}/supply-contracts/authorize`, requireApprover, async (req, res) => {
+  try { res.json(await sienge("POST", `/supply-contracts/authorize`, req.body)); } catch (e) { fail(res, e); }
+});
+// Consulta medicoes
+app.get(`${P}/supply-contracts/measurements/all`, requireAppToken, async (req, res) => {
+  try { const qs = new URLSearchParams(req.query).toString(); res.json(await sienge("GET", `/supply-contracts/measurements/all${qs ? "?" + qs : ""}`)); } catch (e) { fail(res, e); }
+});
+// Autoriza medicoes (aceita PATCH e POST; so Aprovador/Admin)
+app.patch(`${P}/supply-contracts/measurements/authorize`, requireApprover, async (req, res) => {
+  try { res.json(await sienge("PATCH", `/supply-contracts/measurements/authorize`, req.body)); } catch (e) { fail(res, e); }
+});
+app.post(`${P}/supply-contracts/measurements/authorize`, requireApprover, async (req, res) => {
+  try { res.json(await sienge("POST", `/supply-contracts/measurements/authorize`, req.body)); } catch (e) { fail(res, e); }
 });
 
 // ============================================================

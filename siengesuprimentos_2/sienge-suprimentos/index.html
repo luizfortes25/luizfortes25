@@ -398,6 +398,53 @@ function KV(p){
     h("div",{style:{fontSize:p.mono?12.5:15,fontWeight:600,marginTop:2,fontFamily:p.mono?M:F,wordBreak:"break-all"}},p.v));
 }
 
+function Contracts(p){
+  var sb=useState("contracts"),sub=sb[0],setSub=sb[1];
+  var cs=useState([]),contracts=cs[0],setContracts=cs[1];
+  var ms=useState([]),measurements=ms[0],setMeasurements=ms[1];
+  var ls=useState(false),loading=ls[0],setLoading=ls[1];
+  function load(kind){
+    if(!p.live){ p.notify("Conecte ao Sienge"); return; }
+    setLoading(true);
+    var path=kind==="measurements"?"/supply-contracts/measurements/all":"/supply-contracts/all";
+    p.api("GET",path).then(function(data){ var list=Array.isArray(data)?data:((data&&data.results)||[]); if(kind==="measurements")setMeasurements(list); else setContracts(list); })
+      .catch(function(e){ p.notify("Falha ao carregar: "+e.message); }).then(function(){ setLoading(false); });
+  }
+  useEffect(function(){ if(p.live){ load("contracts"); load("measurements"); } },[p.live]);
+  function authorize(kind,item){
+    var path=kind==="measurements"?"/supply-contracts/measurements/authorize":"/supply-contracts/authorize";
+    var id=item.id;
+    var body=kind==="measurements"?{measurementsId:[id]}:{contractsId:[id]};
+    p.api("PATCH",path,body).then(function(){ p.notify((kind==="measurements"?"Medicao ":"Contrato ")+id+" autorizado"); load(kind); }).catch(function(e){ p.notify("Erro: "+e.message); });
+  }
+  function isAuth(x){ return x.authorized===true || x.authorizedAt || /AUTORIZ|APPROVED/i.test(String(x.status||"")); }
+  function cVal(x){ return x.totalValue ?? x.value ?? x.contractValue ?? x.balanceValue ?? x.netValue ?? 0; }
+  function tbl(kind,rows,cols){
+    return h("div",{style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,overflow:"hidden"}},
+      h("div",{style:{overflowX:"auto"}},
+        h("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:14,minWidth:720}},
+          h("thead",null,h("tr",{style:{background:"#f1f4f7",textAlign:"left"}},
+            cols.map(function(c){return h("th",{key:c,style:{padding:"11px 14px",fontSize:12,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.4,borderBottom:"1px solid "+C.line,whiteSpace:"nowrap"}},c);}))),
+          h("tbody",null,
+            rows.map(function(x,i){var au=isAuth(x);return h("tr",{key:i,style:{borderBottom:"1px solid "+C.line}},
+              h("td",{style:{padding:"10px 14px",fontFamily:M,fontWeight:600,color:C.steel}},"#"+(x.id??x.contractId??x.measurementId??"—")),
+              kind==="measurements"?h("td",{style:{padding:"10px 14px"}},x.contractId??x.supplyContractId??"—"):h("td",{style:{padding:"10px 14px",fontWeight:600}},x.supplierName??x.creditorName??x.supplier??x.buildingName??("Forn. "+(x.supplierId??"—"))),
+              h("td",{style:{padding:"10px 14px",fontFamily:M,whiteSpace:"nowrap"}},brl(cVal(x))),
+              h("td",{style:{padding:"10px 14px"}}, h("span",{style:{display:"inline-flex",alignItems:"center",gap:6,padding:"3px 9px",borderRadius:6,background:au?C.greenBg:C.amberBg,color:au?C.green:C.amber,fontWeight:600,fontSize:12}}, au?"Autorizado":"Pendente")),
+              h("td",{style:{padding:"8px 14px",whiteSpace:"nowrap"}}, (!au&&p.canApprove)?h("button",{className:"btn",onClick:function(){authorize(kind,x);},style:mini(C.green,"#fff")},"Autorizar"):null));
+            }),
+            rows.length===0?h("tr",null,h("td",{colSpan:cols.length,style:{padding:26,textAlign:"center",color:C.muted}},loading?"Carregando...":"Nenhum registro.")):null))));
+  }
+  return h("div",{className:"fade"},
+    h(H,{title:"Contratos de Fornecimento",sub:p.live?"Dados ao vivo via /supply-contracts":"Conecte na aba Conexao"}),
+    h("div",{style:{display:"flex",gap:8,margin:"16px 0 14px",flexWrap:"wrap"}},
+      h("button",{className:"btn",onClick:function(){setSub("contracts");},style:tabSm(sub==="contracts")},"Contratos"),
+      h("button",{className:"btn",onClick:function(){setSub("measurements");},style:tabSm(sub==="measurements")},"Medicoes"),
+      h("button",{className:"btn",onClick:function(){load(sub);},style:{marginLeft:"auto",background:C.panel,color:C.steel,border:"1px solid "+C.line,padding:"8px 14px",borderRadius:8,fontSize:13}},"Recarregar")),
+    sub==="contracts"?tbl("contracts",contracts,["No","Fornecedor / Obra","Valor","Status","Acao"]):
+      tbl("measurements",measurements,["No","Contrato","Valor","Status","Acao"]));
+}
+
 function App(p){
   var ts=useState("orders"),tab=ts[0],setTab=ts[1];
   var cs=useState({baseUrl:"",token:""}),cfg=cs[0],setCfg=cs[1];
@@ -662,6 +709,7 @@ function App(p){
   else if(view==="orders") content=ordersView;
   else if(view==="new") content=h(NewRequest,{onCreate:createRequest,requests:requests,live:live});
   else if(view==="stock") content=h(Stock,{stock:stock,movements:movements,onMovement:createMovement,onLoadStock:loadStock,loading:loading,live:live});
+  else if(view==="contracts") content=h(Contracts,{api:api,live:live,canApprove:canApprove,notify:notify});
   else if(view==="nfes") content=h(NFes,{nfes:nfes,onReload:loadNfes,live:live});
   else if(view==="flow") content=h(Flow,null);
   else if(view==="endpoints") content=h(Endpoints,null);
@@ -715,7 +763,7 @@ function Auth(p){
       h("div",{style:{textAlign:"center",marginTop:16,fontSize:12.5,color:C.muted}},"O acesso e criado pelo administrador.")));
 }
 
-var USER_MODULES=[["orders","Pedidos"],["new","Nova Solicitacao"],["stock","Estoque"],["nfes","Notas Fiscais"],["flow","Fluxo"],["endpoints","Endpoints"]];
+var USER_MODULES=[["orders","Pedidos"],["new","Nova Solicitacao"],["stock","Estoque"],["contracts","Contratos"],["nfes","Notas Fiscais"],["flow","Fluxo"],["endpoints","Endpoints"]];
 
 function Users(p){
   var us=useState([]),list=us[0],setList=us[1];
