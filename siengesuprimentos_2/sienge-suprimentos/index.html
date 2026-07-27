@@ -407,6 +407,8 @@ function Contracts(p){
   var fl=useState("all"),filt=fl[0],setFilt=fl[1];
   var pn=useState(null),pending=pn[0],setPending=pn[1];
   var pl=useState(false),ploading=pl[0],setPloading=pl[1];
+  var ob=useState(""),obra=ob[0],setObra=ob[1];
+  function bname(c){ return (c.buildings && c.buildings[0] && c.buildings[0].name) || ""; }
   function loadPending(){ if(!p.live)return; setPloading(true); p.api("GET","/supply-contracts/pending-auth").then(function(d){ setPending((d&&d.pending)||[]); }).catch(function(e){ p.notify("Falha ao buscar pendentes: "+e.message); }).then(function(){ setPloading(false); }); }
   function load(kind){
     if(!p.live){ p.notify("Conecte ao Sienge"); return; }
@@ -443,9 +445,11 @@ function Contracts(p){
   function applyFilter(rows){ return filt==="all"?rows:rows.filter(function(x){ return filt==="auth"?isAuth(x):!isAuth(x); }); }
   function chip(k,label){ return h("button",{className:"btn",onClick:function(){ setFilt(k); if(k==="pending"&&pending===null&&sub==="contracts") loadPending(); },style:{padding:"6px 13px",borderRadius:20,fontSize:12.5,fontWeight:600,border:"1px solid "+(filt===k?C.orange:C.line),background:filt===k?C.orange:"#fff",color:filt===k?"#fff":C.muted}},label); }
   var pendingMode = (sub==="contracts" && filt==="pending");
-  var fcontracts = pendingMode ? (pending||[]) : applyFilter(contracts);
+  var baseC = pendingMode ? (pending||[]) : applyFilter(contracts);
+  var obras=[], seenO={}; baseC.forEach(function(c){ var n=bname(c); if(n && !seenO[n]){ seenO[n]=1; obras.push(n); } }); obras.sort();
+  var fcontracts = obra ? baseC.filter(function(c){ return bname(c)===obra; }) : baseC;
   var fmeas=applyFilter(measurements);
-  var countLabel = sub==="contracts" ? (pendingMode ? (pending?pending.length:"...") : fcontracts.length) : fmeas.length;
+  var countLabel = sub==="contracts" ? fcontracts.length : fmeas.length;
   return h("div",{className:"fade"},
     h(H,{title:"Contratos de Fornecimento",sub:p.live?"Dados ao vivo via /supply-contracts":"Conecte na aba Conexao"}),
     h("div",{style:{display:"flex",gap:8,margin:"16px 0 12px",flexWrap:"wrap"}},
@@ -456,6 +460,7 @@ function Contracts(p){
       h("span",{style:{fontSize:12.5,color:C.muted,fontWeight:600,marginRight:2}},"Filtrar:"),
       chip("all","Todos"), chip("auth","Autorizados"), chip("pending","Nao autorizados"),
       pendingMode?h("button",{className:"btn",onClick:loadPending,style:{background:"transparent",color:C.orange,fontSize:12.5,fontWeight:600,padding:0,marginLeft:2}},"atualizar"):null,
+      sub==="contracts"?h("select",{value:obra,onChange:function(e){setObra(e.target.value);},style:assign({},inp,{width:"auto",padding:"6px 10px",fontSize:12.5,maxWidth:240,marginLeft:4})},[h("option",{key:"__all",value:""},"Todas as obras")].concat(obras.map(function(o){return h("option",{key:o,value:o},o);}))):null,
       h("span",{style:{fontSize:12.5,color:C.muted,marginLeft:6}},countLabel+" registro(s)")),
     (pendingMode && (ploading || pending===null))?
       h("div",{style:{padding:"28px 14px",textAlign:"center",color:C.muted,fontSize:14}},
