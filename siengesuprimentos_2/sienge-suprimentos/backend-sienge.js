@@ -497,6 +497,27 @@ app.post(`${P}/stock-movements/transfer`, requireAppToken, async (req, res) => {
 app.get(`${P}/supply-contracts/all`, requireAppToken, async (req, res) => {
   try { const qs = new URLSearchParams(req.query).toString(); res.json(await sienge("GET", `/supply-contracts/all${qs ? "?" + qs : ""}`)); } catch (e) { fail(res, e); }
 });
+// Busca contrato(s) por numero (ex.: ?number=SPE0742). Aceita token via URL para inspecao.
+app.get(`${P}/supply-contracts/find`, debugAuth, async (req, res) => {
+  try {
+    const q = String(req.query.number || "").toUpperCase().trim();
+    if (!q) return res.status(400).json({ error: "Informe ?number=..." });
+    const limit = 200; let offset = 0, count = Infinity, pages = 0; const found = [];
+    while (offset < count && pages < 80 && found.length < 20) {
+      const data = await sienge("GET", `/supply-contracts/all?limit=${limit}&offset=${offset}`);
+      const results = (data && data.results) || [];
+      const meta = data && data.resultSetMetadata;
+      count = meta && meta.count != null ? meta.count : results.length;
+      for (const c of results) {
+        const ref = (String(c.documentId || "") + "/" + String(c.contractNumber || "")).toUpperCase();
+        if (String(c.contractNumber || "").toUpperCase() === q || ref === q || ref.indexOf(q) !== -1) found.push(c);
+      }
+      pages++; offset += limit;
+      if (!results.length) break;
+    }
+    res.json({ query: q, found });
+  } catch (e) { fail(res, e); }
+});
 // Retorna contratos AGUARDANDO AUTORIZACAO usando o filtro oficial do Sienge
 // (authorization=N). Ignora contratos com valor zero.
 app.get(`${P}/supply-contracts/pending-auth`, requireAppToken, async (req, res) => {
