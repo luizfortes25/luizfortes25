@@ -403,22 +403,23 @@ function Contracts(p){
   var cs=useState([]),contracts=cs[0],setContracts=cs[1];
   var ms=useState([]),measurements=ms[0],setMeasurements=ms[1];
   var ls=useState(false),loading=ls[0],setLoading=ls[1];
+  var me=useState(""),merr=me[0],setMerr=me[1];
   function load(kind){
     if(!p.live){ p.notify("Conecte ao Sienge"); return; }
     setLoading(true);
     var path=kind==="measurements"?"/supply-contracts/measurements/all":"/supply-contracts/all";
-    p.api("GET",path).then(function(data){ var list=Array.isArray(data)?data:((data&&data.results)||[]); if(kind==="measurements")setMeasurements(list); else setContracts(list); })
-      .catch(function(e){ p.notify("Falha ao carregar: "+e.message); }).then(function(){ setLoading(false); });
+    p.api("GET",path).then(function(data){ var list=Array.isArray(data)?data:((data&&data.results)||[]); if(kind==="measurements"){setMeasurements(list);setMerr("");} else setContracts(list); })
+      .catch(function(e){ if(kind==="measurements"){ setMerr(/403|Permission/i.test(e.message)?"Sem permissao para Medicoes: libere o modulo de Medicoes para o usuario da API no Sienge.":e.message); } else p.notify("Falha ao carregar: "+e.message); }).then(function(){ setLoading(false); });
   }
   useEffect(function(){ if(p.live){ load("contracts"); load("measurements"); } },[p.live]);
   function authorize(kind,item){
     var path=kind==="measurements"?"/supply-contracts/measurements/authorize":"/supply-contracts/authorize";
-    var id=item.id;
-    var body=kind==="measurements"?{measurementsId:[id]}:{contractsId:[id]};
-    p.api("PATCH",path,body).then(function(){ p.notify((kind==="measurements"?"Medicao ":"Contrato ")+id+" autorizado"); load(kind); }).catch(function(e){ p.notify("Erro: "+e.message); });
+    var ref=item.documentId?(item.documentId+" "+item.contractNumber):(item.contractNumber||item.id);
+    var body=kind==="measurements"?{measurements:[{documentId:item.documentId,contractNumber:item.contractNumber,measurementNumber:item.measurementNumber}]}:{contracts:[{documentId:item.documentId,contractNumber:item.contractNumber}]};
+    p.api("PATCH",path,body).then(function(){ p.notify((kind==="measurements"?"Medicao ":"Contrato ")+ref+" autorizado"); load(kind); }).catch(function(e){ p.notify("Erro: "+e.message); });
   }
-  function isAuth(x){ return x.authorized===true || x.authorizedAt || /AUTORIZ|APPROVED/i.test(String(x.status||"")); }
-  function cVal(x){ return x.totalValue ?? x.value ?? x.contractValue ?? x.balanceValue ?? x.netValue ?? 0; }
+  function isAuth(x){ return x.isAuthorized===true || x.authorized===true || x.statusApproval==="APPROVED"; }
+  function cVal(x){ var t=(Number(x.totalLaborValue)||0)+(Number(x.totalMaterialValue)||0); return t || x.totalValue || x.value || x.netValue || 0; }
   function tbl(kind,rows,cols){
     return h("div",{style:{background:C.panel,border:"1px solid "+C.line,borderRadius:10,overflow:"hidden"}},
       h("div",{style:{overflowX:"auto"}},
@@ -426,9 +427,9 @@ function Contracts(p){
           h("thead",null,h("tr",{style:{background:"#f1f4f7",textAlign:"left"}},
             cols.map(function(c){return h("th",{key:c,style:{padding:"11px 14px",fontSize:12,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:0.4,borderBottom:"1px solid "+C.line,whiteSpace:"nowrap"}},c);}))),
           h("tbody",null,
-            rows.map(function(x,i){var au=isAuth(x);return h("tr",{key:i,style:{borderBottom:"1px solid "+C.line}},
-              h("td",{style:{padding:"10px 14px",fontFamily:M,fontWeight:600,color:C.steel}},"#"+(x.id??x.contractId??x.measurementId??"—")),
-              kind==="measurements"?h("td",{style:{padding:"10px 14px"}},x.contractId??x.supplyContractId??"—"):h("td",{style:{padding:"10px 14px",fontWeight:600}},x.supplierName??x.creditorName??x.supplier??x.buildingName??("Forn. "+(x.supplierId??"—"))),
+            rows.map(function(x,i){var au=isAuth(x);var bld=(x.buildings&&x.buildings[0]&&x.buildings[0].name)||null;return h("tr",{key:i,style:{borderBottom:"1px solid "+C.line}},
+              h("td",{style:{padding:"10px 14px",fontFamily:M,fontWeight:600,color:C.steel,whiteSpace:"nowrap"}},(x.documentId?x.documentId+" ":"")+(x.contractNumber??x.number??x.id??x.measurementId??"—")),
+              kind==="measurements"?h("td",{style:{padding:"10px 14px"}},x.contractNumber??x.contractId??x.supplyContractId??"—"):h("td",{style:{padding:"10px 14px"}},h("div",{style:{fontWeight:600}},x.supplierName??x.creditorName??x.supplier??("Forn. "+(x.supplierId??"—"))),bld?h("div",{style:{fontSize:12,color:C.muted}},bld):null),
               h("td",{style:{padding:"10px 14px",fontFamily:M,whiteSpace:"nowrap"}},brl(cVal(x))),
               h("td",{style:{padding:"10px 14px"}}, h("span",{style:{display:"inline-flex",alignItems:"center",gap:6,padding:"3px 9px",borderRadius:6,background:au?C.greenBg:C.amberBg,color:au?C.green:C.amber,fontWeight:600,fontSize:12}}, au?"Autorizado":"Pendente")),
               h("td",{style:{padding:"8px 14px",whiteSpace:"nowrap"}}, (!au&&p.canApprove)?h("button",{className:"btn",onClick:function(){authorize(kind,x);},style:mini(C.green,"#fff")},"Autorizar"):null));
@@ -442,7 +443,7 @@ function Contracts(p){
       h("button",{className:"btn",onClick:function(){setSub("measurements");},style:tabSm(sub==="measurements")},"Medicoes"),
       h("button",{className:"btn",onClick:function(){load(sub);},style:{marginLeft:"auto",background:C.panel,color:C.steel,border:"1px solid "+C.line,padding:"8px 14px",borderRadius:8,fontSize:13}},"Recarregar")),
     sub==="contracts"?tbl("contracts",contracts,["No","Fornecedor / Obra","Valor","Status","Acao"]):
-      tbl("measurements",measurements,["No","Contrato","Valor","Status","Acao"]));
+      (merr?h("div",{style:{background:C.amberBg,border:"1px solid #f0d9a0",borderRadius:10,padding:"14px 16px",color:"#7a5a00",fontSize:14}},merr):tbl("measurements",measurements,["No","Contrato","Valor","Status","Acao"])));
 }
 
 function App(p){
