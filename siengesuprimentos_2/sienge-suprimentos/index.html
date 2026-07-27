@@ -404,6 +404,7 @@ function Contracts(p){
   var ms=useState([]),measurements=ms[0],setMeasurements=ms[1];
   var ls=useState(false),loading=ls[0],setLoading=ls[1];
   var me=useState(""),merr=me[0],setMerr=me[1];
+  var fl=useState("all"),filt=fl[0],setFilt=fl[1];
   function load(kind){
     if(!p.live){ p.notify("Conecte ao Sienge"); return; }
     setLoading(true);
@@ -436,14 +437,21 @@ function Contracts(p){
             }),
             rows.length===0?h("tr",null,h("td",{colSpan:cols.length,style:{padding:26,textAlign:"center",color:C.muted}},loading?"Carregando...":"Nenhum registro.")):null))));
   }
+  function applyFilter(rows){ return filt==="all"?rows:rows.filter(function(x){ return filt==="auth"?isAuth(x):!isAuth(x); }); }
+  function chip(k,label){ return h("button",{className:"btn",onClick:function(){setFilt(k);},style:{padding:"6px 13px",borderRadius:20,fontSize:12.5,fontWeight:600,border:"1px solid "+(filt===k?C.orange:C.line),background:filt===k?C.orange:"#fff",color:filt===k?"#fff":C.muted}},label); }
+  var fcontracts=applyFilter(contracts), fmeas=applyFilter(measurements);
   return h("div",{className:"fade"},
     h(H,{title:"Contratos de Fornecimento",sub:p.live?"Dados ao vivo via /supply-contracts":"Conecte na aba Conexao"}),
-    h("div",{style:{display:"flex",gap:8,margin:"16px 0 14px",flexWrap:"wrap"}},
+    h("div",{style:{display:"flex",gap:8,margin:"16px 0 12px",flexWrap:"wrap"}},
       h("button",{className:"btn",onClick:function(){setSub("contracts");},style:tabSm(sub==="contracts")},"Contratos"),
       h("button",{className:"btn",onClick:function(){setSub("measurements");},style:tabSm(sub==="measurements")},"Medicoes"),
       h("button",{className:"btn",onClick:function(){load(sub);},style:{marginLeft:"auto",background:C.panel,color:C.steel,border:"1px solid "+C.line,padding:"8px 14px",borderRadius:8,fontSize:13}},"Recarregar")),
-    sub==="contracts"?tbl("contracts",contracts,["No","Fornecedor / Obra","Valor","Status","Acao"]):
-      (merr?h("div",{style:{background:C.amberBg,border:"1px solid #f0d9a0",borderRadius:10,padding:"14px 16px",color:"#7a5a00",fontSize:14}},merr):tbl("measurements",measurements,["No","Contrato","Valor","Status","Acao"])));
+    h("div",{style:{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}},
+      h("span",{style:{fontSize:12.5,color:C.muted,fontWeight:600,marginRight:2}},"Filtrar:"),
+      chip("all","Todos"), chip("auth","Autorizados"), chip("pending","Nao autorizados"),
+      h("span",{style:{fontSize:12.5,color:C.muted,marginLeft:6}},(sub==="contracts"?fcontracts.length:fmeas.length)+" registro(s)")),
+    sub==="contracts"?tbl("contracts",fcontracts,["No","Fornecedor / Obra","Valor","Status","Acao"]):
+      (merr?h("div",{style:{background:C.amberBg,border:"1px solid #f0d9a0",borderRadius:10,padding:"14px 16px",color:"#7a5a00",fontSize:14}},merr):tbl("measurements",fmeas,["No","Contrato","Valor","Status","Acao"])));
 }
 
 function App(p){
